@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	MachiningImage(false,CheckHasMagick())
+	MachiningImage(true)
 
 	input := bufio.NewScanner(os.Stdin)
 	for input.Scan() {

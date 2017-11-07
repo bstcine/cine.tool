@@ -82,7 +82,7 @@ func checkLogoFile(logoPath string)  {
 /**
 加工图片
  */
-func MachiningImage(debug, hasMagick bool) {
+func MachiningImage(debug bool) {
 	var doPath, toPath, logoPath string
 	if debug {
 		doPath = TestPath
@@ -95,30 +95,28 @@ func MachiningImage(debug, hasMagick bool) {
 		logoPath = doPath + LogoName
 	}
 
-	checkLogoFile(logoPath)
-
 	files, err := ioutil.ReadDir(doPath)
 	if err != nil {
 		return
 	}
+
+	hasMagick := CheckHasMagick()
+	checkLogoFile(logoPath)
 
 	fmt.Println("===============   开始图片文件处理   ===============")
 	for i := 0; i < len(files); i++ {
 		var info = files[i]
 		var name = info.Name()
 
-		if strings.HasPrefix(name,".") || strings.HasPrefix(name,"resize-") || strings.HasPrefix(name,"logo-"){
+		if strings.HasPrefix(name,".") || strings.HasPrefix(name,"resize-") || strings.HasPrefix(name,"logo-")|| strings.HasPrefix(name,"m-") || strings.HasPrefix(name,"n-"){
 			continue
 		}
 
 		if strings.HasSuffix(name, ".jpg") || strings.HasSuffix(name, ".png") {
 			fmt.Print(name + " 处理中...")
 			if debug {
-				resizeName := "resize-" + name
-				logoName := "logo-" + name
-				ResizeImgByMagick(doPath, toPath, name, resizeName)
-				LogoImgByMagick(logoPath, toPath, toPath, resizeName+".jpg", logoName+".jpg")
-				//ResizeImg(doPath, doPath, name, "n-"+name)
+				ResizeImgByMagick(doPath, toPath, name, "m-" + name)
+				ResizeImg(doPath, doPath, name, "n-"+name)
 			} else {
 				resizeName := "resize-" + name
 				logoName := "logo-" + name
