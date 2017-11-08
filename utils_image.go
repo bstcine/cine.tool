@@ -2,8 +2,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
-	"path/filepath"
 	"encoding/base64"
 	"strings"
 	"log"
@@ -22,43 +20,22 @@ const LogoName string = ".logo.png"
 const DoDir string = "doing" + string(os.PathSeparator)
 
 /**
-获取当前路径
- */
-func GetCurrPath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	ret := path[:index] + string(os.PathSeparator)
-	return ret
-}
-
-/**
 检查工具（ Magick ）是否存在
  */
 func CheckHasMagick() bool {
 	command := "magick -version"
 
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command("cmd", "/C", command)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
+	status := CineCMD(command)
+
+	if !status {
+		if runtime.GOOS == "windows" {
 			fmt.Println("请安装图片处理工具 https://www.imagemagick.org/script/download.php#windows")
-			fmt.Println(err)
-			return false
-		}
-		fmt.Println(string(out))
-	} else {
-		cmd := exec.Command("bash", "-c", command)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
+		} else {
 			fmt.Println("请安装图片处理工具 https://www.imagemagick.org/script/download.php")
-			fmt.Println(err)
-			return false
 		}
-		fmt.Println(string(out))
 	}
 
-	return true
+	return status
 }
 
 /**
@@ -69,72 +46,14 @@ func checkLogoFile(logoPath string)  {
 	if err != nil && os.IsNotExist(err) {
 		logoPerm, _ := base64.StdEncoding.DecodeString(logoBaseStr) //成图片文件并把文件写入到buffer
 		err := ioutil.WriteFile(logoPath, logoPerm, 0666)
-		fmt.Println("水印图片创建成功...")
+		fmt.Println(">>>>>>>>>>   水印图片创建成功...")
 		if err != nil {
 			fmt.Println(err)
 		}
 	}else {
-		fmt.Println("水印图片已经存在...")
+		fmt.Println(">>>>>>>>>>   水印图片已经存在...")
 	}
 	defer file.Close()
-}
-
-/**
-加工图片
- */
-func MachiningImage(debug bool) {
-	var doPath, toPath, logoPath string
-	if debug {
-		doPath = TestPath
-		toPath = TestPath
-		logoPath = doPath + LogoName
-	} else {
-		doPath = GetCurrPath()
-		toPath = doPath + DoDir
-		os.MkdirAll(toPath, 0777)
-		logoPath = doPath + LogoName
-	}
-
-	files, err := ioutil.ReadDir(doPath)
-	if err != nil {
-		return
-	}
-
-	hasMagick := CheckHasMagick()
-	checkLogoFile(logoPath)
-
-	fmt.Println("===============   开始图片文件处理   ===============")
-	for i := 0; i < len(files); i++ {
-		var info = files[i]
-		var name = info.Name()
-
-		if strings.HasPrefix(name,".") || strings.HasPrefix(name,"resize-") || strings.HasPrefix(name,"logo-")|| strings.HasPrefix(name,"m-") || strings.HasPrefix(name,"n-"){
-			continue
-		}
-
-		if strings.HasSuffix(name, ".jpg") || strings.HasSuffix(name, ".png") {
-			fmt.Print(name + " 处理中...")
-			if debug {
-				ResizeImgByMagick(doPath, toPath, name, "m-" + name)
-				ResizeImg(doPath, doPath, name, "n-"+name)
-			} else {
-				resizeName := "resize-" + name
-				logoName := "logo-" + name
-				if hasMagick {
-					ResizeImgByMagick(doPath, toPath, name, resizeName)
-					LogoImgByMagick(logoPath, toPath, toPath, resizeName+".jpg", logoName+".jpg")
-				} else {
-					ResizeImg(doPath, toPath, name, resizeName)
-					LogoImg(logoPath, toPath, toPath, resizeName,logoName)
-				}
-			}
-
-			fmt.Println(" 完成.")
-		}
-	}
-
-	fmt.Println("===============   图片文件处理成功   ===============")
-	fmt.Println("请输入 end ,结束本程序...")
 }
 
 /**
@@ -219,30 +138,6 @@ func LogoImgByMagick(logoPath, oidPath, newPath, name, newName string) {
 	} else {
 		fmt.Print(" 水印失败 ")
 	}
-}
-
-/**
-运行命令
- */
-func CineCMD(command string) bool {
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command("cmd", "/C", command)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Print(err)
-			return false
-		}
-		fmt.Print(string(out))
-	} else {
-		cmd := exec.Command("bash", "-c", command)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Print(err)
-			return false
-		}
-		fmt.Print(string(out))
-	}
-	return true
 }
 
 
