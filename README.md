@@ -1,4 +1,5 @@
-- ### 文件压缩工具-生成
+# cine.tool.go
+- ### 文件压缩工具-Build
    - Window(exe)
       ```
       $cd cine.tool.go
