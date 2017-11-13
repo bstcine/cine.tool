@@ -40,13 +40,13 @@ func main() {
 		var name = images[i]
 		fmt.Print(name + " 处理中...")
 		if debug {
-			ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, "m-"+name)
 			ResizeImg(inputArgs.LocalPath, inputArgs.OutputPath, name, "n-"+name)
+			ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, "m-"+name)
 		} else {
-			ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
-			LogoImgByMagick(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name+".jpg", name+".jpg")
-
-			if !hasMagick {
+			if hasMagick {
+				ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
+				LogoImgByMagick(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name+".jpg", name+".jpg")
+			} else {
 				ResizeImg(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
 				LogoImg(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name, name)
 			}
