@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"os"
@@ -41,7 +41,7 @@ func CheckHasMagick() bool {
 /**
 检查水印
  */
-func checkLogoFile(logoPath string)  {
+func CheckLogoFile(logoPath string)  {
 	file, err := os.Open(logoPath)
 	if err != nil && os.IsNotExist(err) {
 		logoPerm, _ := base64.StdEncoding.DecodeString(logoBaseStr) //成图片文件并把文件写入到buffer

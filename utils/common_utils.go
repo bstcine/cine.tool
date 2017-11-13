@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"os/exec"
@@ -37,7 +37,7 @@ func GetOutPath(dir string) string {
  */
 func GetImageAudio(path string) (images, audios []string) {
 	//读取当前目录文件列表
-	files, err := ioutil.ReadDir(inputArgs.LocalPath)
+	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, nil
 	}
