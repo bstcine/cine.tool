@@ -22,7 +22,7 @@ func GetCurPath() string {
 }
 
 /**
-获取输入路径
+获取输出路径
  */
 func GetOutPath(dir string) string {
 	file, _ := exec.LookPath(os.Args[0])
@@ -89,4 +89,19 @@ func CineCMD(command string) bool {
 		fmt.Print(string(out))
 	}
 	return result
+}
+
+/**
+运行命令
+ */
+func RunCMD(command string) (string, bool) {
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("cmd", "/C", command)
+		out, err := cmd.CombinedOutput()
+		return string(out), err == nil
+	} else {
+		cmd := exec.Command("bash", "-c", command)
+		out, err := cmd.CombinedOutput()
+		return string(out), err == nil
+	}
 }
