@@ -8,14 +8,17 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"strconv"
-	"log"
 )
 
 type Lesson struct {
-	Id       string
-	CourseId string
-	Duration int
-	Medias   []Media
+	Id         string
+	CourseId   string
+	CourseName string
+	ParentName string
+	Name       string
+	Medias     string
+	Duration   int
+	Msg        string
 }
 
 type Media struct {
@@ -42,7 +45,7 @@ type UpdateArgs struct {
 
 type Format struct {
 	Duration string
-	Size string
+	Size     string
 }
 
 var db *sql.DB
@@ -59,7 +62,7 @@ func main() {
 		updateArgs.BaseUrl = "/Volumes/Go/Test"
 		updateArgs.Host = "127.0.0.1:3306"
 		updateArgs.User = "root"
-		updateArgs.Password = "dev0423wx"
+		updateArgs.Password = "cine"
 		updateArgs.Database = "cine"
 		updateArgs.CourseId = "updatetest"
 	} else {
@@ -76,7 +79,6 @@ func main() {
 		updateArgs.Database = args[5]
 		updateArgs.CourseId = args[6]
 	}
-
 
 	//校验文件路径...
 	if !utils.Exists(updateArgs.BaseUrl) {
@@ -100,7 +102,7 @@ func main() {
 		return
 	}
 
-	lessons, _ := DbGetLessons(updateArgs.CourseId)
+	lessons := DbGetAllLessons()
 
 	SearchLesson(lessons)
 }
@@ -109,107 +111,118 @@ func main() {
 遍历 Lesson
  */
 func SearchLesson(lessons []Lesson) {
-	if len(lessons) <=0 {
+	if len(lessons) <= 0 {
 		fmt.Println("info: Not lesson data need update...")
 		return
 	}
 
-	for _, lesson := range lessons {
-		duration, medias := UpdateMedias(lesson)
-		jsonMedias, err := json.Marshal(medias)
+	var errLessons []Lesson
 
-		if err == nil {
-			DbUpdateLesson(lesson.Id, duration, string(jsonMedias))
+	for _, lesson := range lessons {
+		newLesson := CheckMedias(lesson)
+
+		if newLesson.Msg == "" {
+			//DbUpdateLesson(lesson.Id, lesson.Duration)
 		} else {
-			fmt.Println(err)
+			errLessons = append(errLessons, newLesson)
 		}
 	}
+
+	fmt.Println(errLessons)
 }
 
 /**
 更新 Lesson 下 Media 文件时长和大小
  */
-func UpdateMedias(lesson Lesson) (newDuration int,newMedias []Media) {
-	courseId := lesson.CourseId
+func CheckMedias(lesson Lesson) (newLesson Lesson) {
+	fmt.Println("check lesson:" + lesson.Id)
 
-	for _, media := range lesson.Medias {
-		format := GetMediaFile(courseId, media)
+	var medias []Media
+	err := json.Unmarshal([]byte(lesson.Medias), &medias)
 
-		i, _ := strconv.ParseFloat(format.Duration, 64)
-		duration := int(i)
-		size,_ := strconv.Atoi(format.Size)
+	lesson.Medias = ""
+	newLesson = lesson
 
-		newDuration += duration
-		media.Duration = duration
-		media.Size = size/1000
-		newMedias = append(newMedias, media)
+	if err != nil {
+		newLesson.Msg = "medias json error"
+		return newLesson
 	}
 
-	return newDuration, newMedias
+	var msg string
+	var allDuration int
+
+	for index, media := range medias {
+		format, err := ReadMediaFile(lesson.CourseId + string(os.PathSeparator) + media.Url)
+
+		if err == nil {
+			i, _ := strconv.ParseFloat(format.Duration, 64)
+			duration := int(i)
+			size, _ := strconv.Atoi(format.Size)
+
+			allDuration += duration
+			media.Size = size / 1000
+
+			if media.Duration != duration {
+				msg += "第 " + strconv.Itoa(index+1) + " 个课件的音视频时长应为：" + strconv.Itoa(duration) + ";<br>"
+			}
+		} else {
+			msg += "第 " + strconv.Itoa(index+1) + " 个课件的音视频不存在;<br>"
+		}
+	}
+
+	newLesson.Duration = allDuration
+	newLesson.Msg = msg
+	return newLesson
 }
 
 /**
 获取 Media 文件的信息
  */
-func GetMediaFile(courseId string, media Media) Format {
-	path := updateArgs.BaseUrl + string(os.PathSeparator) + courseId + string(os.PathSeparator) + media.Url
-
-	jsonFileInfo := utils.GetJsonFileInfo(path)
+func ReadMediaFile(path string) (Format, error) {
+	result, err := utils.GetJsonFileInfo(updateArgs.BaseUrl + string(os.PathSeparator) + path)
 
 	var fileinfo map[string]Format
-	json.Unmarshal([]byte(jsonFileInfo), &fileinfo)
+	json.Unmarshal([]byte(result), &fileinfo)
 	format, _ := fileinfo["format"]
 
-	log.Println(format)
-
-	return format
+	return format, err
 }
 
 /**
 查询数据库
  */
-func DbGetLessons(courseId string) (lessons []Lesson, errLessonIds []string) {
-	rows, _ := db.Query("select id,lesson_id,medias from t_content where delete_by is null and type = '2'  and check_status = '1' and lesson_id = ? ", courseId)
+func DbGetAllLessons() (lessons []Lesson) {
+	var sql = "select a.id,a.lesson_id,b.name lesson_name,c.name parent_name,a.name,a.medias " +
+		"from t_content a left join t_lesson b on a.lesson_id = b.id left join t_content c on a.parent_id = c.id " +
+		"where a.delete_by is null and a.parent_id <> '1' and a.type = '2' and a.check_status = '1' and b.delete_by is null and b.id is not null " +
+		"order by a.lesson_id,a.parent_id,a.seq asc"
+	rows, _ := db.Query(sql)
 	defer rows.Close()
 
 	for rows.Next() {
 		var lesson Lesson
-		var mediasJson string
-		err := rows.Scan(&lesson.Id, &lesson.CourseId, &mediasJson)
+		err := rows.Scan(&lesson.Id, &lesson.CourseId, &lesson.CourseName, &lesson.ParentName, &lesson.Name, &lesson.Medias)
 
 		if err == nil {
-			var medias []Media
-			err := json.Unmarshal([]byte(mediasJson), &medias)
-
-			if err == nil {
-				lesson.Medias = medias
-				lessons = append(lessons, lesson)
-			} else {
-				errLessonIds = append(errLessonIds, lesson.Id)
-			}
+			lessons = append(lessons, lesson)
 		}
 	}
 
-	return lessons, errLessonIds
+	return lessons
 }
 
 /**
 更新数据库
  */
-func DbUpdateLesson(id string, duration int, medias string) {
+func DbUpdateLesson(id string, duration int) {
 	if duration == 0 {
 		fmt.Println("error : lesson duration is 0 ....")
 		return
 	}
 
-	if medias == "" {
-		fmt.Println("error : medias is null ....")
-		return
-	}
-
-	_, err := db.Exec("UPDATE t_content SET duration = ?,medias = ?,check_status = '2' WHERE id = ? and check_status = '1' ", duration, medias, id)
+	_, err := db.Exec("UPDATE t_content SET duration = ?,check_status = '2' WHERE id = ? and check_status = '1' ", duration, id)
 	if err == nil {
-		fmt.Println("info: lesson( "+id+") data update success...")
+		fmt.Println("info: lesson( " + id + ") data update success...")
 	} else {
 		fmt.Println(err)
 	}

@@ -94,14 +94,14 @@ func CineCMD(command string) bool {
 /**
 运行命令
  */
-func RunCMD(command string) (string, bool) {
+func RunCMD(command string) (string, error) {
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("cmd", "/C", command)
 		out, err := cmd.CombinedOutput()
-		return string(out), err == nil
+		return string(out), err
 	} else {
 		cmd := exec.Command("bash", "-c", command)
 		out, err := cmd.CombinedOutput()
-		return string(out), err == nil
+		return string(out), err
 	}
 }
