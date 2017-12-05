@@ -1,12 +1,12 @@
-package src
+package main
 
 import (
 	"./utils"
-	"fmt"
-	"os"
-	"encoding/json"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"os"
 	"strconv"
 )
 
@@ -109,7 +109,7 @@ func main() {
 
 /**
 遍历 Lesson
- */
+*/
 func SearchLesson(lessons []Lesson) {
 	if len(lessons) <= 0 {
 		fmt.Println("info: Not lesson data need update...")
@@ -133,7 +133,7 @@ func SearchLesson(lessons []Lesson) {
 
 /**
 更新 Lesson 下 Media 文件时长和大小
- */
+*/
 func CheckMedias(lesson Lesson) (newLesson Lesson) {
 	fmt.Println("check lesson:" + lesson.Id)
 
@@ -177,7 +177,7 @@ func CheckMedias(lesson Lesson) (newLesson Lesson) {
 
 /**
 获取 Media 文件的信息
- */
+*/
 func ReadMediaFile(path string) (Format, error) {
 	result, err := utils.GetJsonFileInfo(updateArgs.BaseUrl + string(os.PathSeparator) + path)
 
@@ -190,7 +190,7 @@ func ReadMediaFile(path string) (Format, error) {
 
 /**
 查询数据库
- */
+*/
 func DbGetAllLessons() (lessons []Lesson) {
 	var sql = "select a.id,a.lesson_id,b.name lesson_name,c.name parent_name,a.name,a.medias " +
 		"from t_content a left join t_lesson b on a.lesson_id = b.id left join t_content c on a.parent_id = c.id " +
@@ -213,7 +213,7 @@ func DbGetAllLessons() (lessons []Lesson) {
 
 /**
 更新数据库
- */
+*/
 func DbUpdateLesson(id string, duration int) {
 	if duration == 0 {
 		fmt.Println("error : lesson duration is 0 ....")

@@ -1,10 +1,10 @@
-package src
+package main
 
 import (
-	"os"
+	"./utils"
 	"bufio"
 	"fmt"
-	"./utils"
+	"os"
 )
 
 type InputArgs struct {
@@ -33,7 +33,7 @@ func main() {
 	utils.CheckLogoFile(inputArgs.LogoPath)
 
 	//获取图片和音频
-	images,audios := utils.GetImageAudio(inputArgs.LocalPath)
+	images, audios := utils.GetImageAudio(inputArgs.LocalPath)
 	hasMagick := utils.CheckHasMagick()
 
 	fmt.Println(">>>>>>>>>>   开始处理图片（压缩加水印）...")
@@ -64,7 +64,7 @@ func main() {
 			fmt.Print(name + " 处理中...")
 			if debug {
 				utils.ResizeAudio(inputArgs.LocalPath, inputArgs.OutputPath, name, "f-"+name)
-			}else {
+			} else {
 				utils.ResizeAudio(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
 			}
 

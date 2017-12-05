@@ -6,8 +6,8 @@ import (
 
 /**
 文件是否存在
- */
-func Exists(path string) (bool) {
+*/
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -20,9 +20,9 @@ func Exists(path string) (bool) {
 
 /**
 获取JSON格式的文件信息
- */
-func GetJsonFileInfo(url string) (string,error) {
+*/
+func GetJsonFileInfo(url string) (string, error) {
 	var cmd = "ffprobe -v quiet -print_format json -show_format " + url
-	result,err := RunCMD(cmd)
-	return result,err
+	result, err := RunCMD(cmd)
+	return result, err
 }

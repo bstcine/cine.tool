@@ -1,18 +1,18 @@
 package utils
 
 import (
-	"os/exec"
-	"os"
-	"path/filepath"
-	"strings"
-	"runtime"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 /**
 获取当前路径
- */
+*/
 func GetCurPath() string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
@@ -23,7 +23,7 @@ func GetCurPath() string {
 
 /**
 获取输出路径
- */
+*/
 func GetOutPath(dir string) string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
@@ -34,7 +34,7 @@ func GetOutPath(dir string) string {
 
 /**
 获取图片和音频
- */
+*/
 func GetImageAudio(path string) (images, audios []string) {
 	//读取当前目录文件列表
 	files, err := ioutil.ReadDir(path)
@@ -67,7 +67,7 @@ func GetImageAudio(path string) (images, audios []string) {
 
 /**
 运行命令
- */
+*/
 func CineCMD(command string) bool {
 	var result bool = true
 
@@ -93,7 +93,7 @@ func CineCMD(command string) bool {
 
 /**
 运行命令
- */
+*/
 func RunCMD(command string) (string, error) {
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("cmd", "/C", command)

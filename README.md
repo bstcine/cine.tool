@@ -3,10 +3,10 @@
    - Window(exe)
       ```
       $  cd cine.tool.go
-      $  CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build app_compress
+      $  CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_compress src/app_compress.go
       ```
    - Mac
       ```
       $  cd cine.tool.go
-      $  go build app_compress
+      $  go build -o bin/app_compress src/app_compress.go
       ```
