@@ -17,13 +17,14 @@ var inputArgs InputArgs
 
 func main() {
 	debug := true
+
 	if debug {
 		inputArgs.LocalPath = "/Volumes/Go/test/"
-		inputArgs.OutputPath = "/Volumes/Go/test/"
+		inputArgs.OutputPath = "/Volumes/Go/test/compress/"
 		inputArgs.LogoPath = inputArgs.OutputPath + ".logo.png"
 	} else {
 		inputArgs.LocalPath = utils.GetCurPath()
-		inputArgs.OutputPath = utils.GetOutPath("doing")
+		inputArgs.OutputPath = utils.GetOutPath("compress")
 		inputArgs.LogoPath = inputArgs.OutputPath + ".logo.png"
 	}
 
@@ -34,30 +35,20 @@ func main() {
 
 	//获取图片和音频
 	images, audios := utils.GetImageAudio(inputArgs.LocalPath)
-	hasMagick := utils.CheckHasMagick()
 
-	fmt.Println(">>>>>>>>>>   开始处理图片（压缩加水印）...")
-	for i := 0; i < len(images); i++ {
-		var name = images[i]
-		fmt.Print(name + " 处理中...")
-		if debug {
-			utils.ResizeImg(inputArgs.LocalPath, inputArgs.OutputPath, name, "n-"+name)
-			utils.ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, "m-"+name)
-		} else {
-			if hasMagick {
-				utils.ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
-				utils.LogoImgByMagick(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name+".jpg", name+".jpg")
-			} else {
-				utils.ResizeImg(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
-				utils.LogoImg(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name, name)
-			}
+	if utils.CheckHasMagick() {
+		fmt.Println(">>>>>>>>>>   开始处理图片（压缩加水印）...")
+		for i := 0; i < len(images); i++ {
+			var name = images[i]
+			fmt.Print(name + " 处理中...")
+			utils.ResizeImgByMagick(inputArgs.LocalPath, inputArgs.OutputPath, name, name)
+			utils.LogoImgByMagick(inputArgs.LogoPath, inputArgs.OutputPath, inputArgs.OutputPath, name+".jpg", name+".jpg")
+			fmt.Println(" 完成.")
 		}
-		fmt.Println(" 完成.")
+		fmt.Println("<<<<<<<<<<   图片处理成功...")
 	}
-	fmt.Println("<<<<<<<<<<   图片处理成功...")
 
-	hasffmpeg := utils.CheckHasFFMPEG()
-	if hasffmpeg {
+	if utils.CheckHasFFMPEG() {
 		fmt.Println(">>>>>>>>>>   开始处理音频（压缩）...")
 		for i := 0; i < len(audios); i++ {
 			var name = audios[i]
