@@ -23,7 +23,7 @@ type CineFile struct {
 func main() {
 	fmt.Println("欢迎使用课程习题与单词下载工具....")
 
-	isdebug := true
+	isdebug := false
 
 	var outPutPath string
 	var getCourseFileApi string
@@ -31,7 +31,7 @@ func main() {
 
 	if isdebug {
 		outPutPath = "/Volumes/Go/test/习题单词库/"
-		getCourseFileApi = "http://local.bstcine.com:9000/api/tool/content/course/exerciseWord"
+		getCourseFileApi = "http://apptest.bstcine.com/api/tool/content/course/exerciseWord"
 		os.MkdirAll(outPutPath, 0777)
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "习题单词库" + string(os.PathSeparator)
