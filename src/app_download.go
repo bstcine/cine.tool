@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"os"
 	"./utils"
+	"sync"
 )
+
+var waitgroup sync.WaitGroup
 
 type Result struct {
 	Status bool
@@ -15,15 +18,43 @@ type Result struct {
 }
 
 type CineFile struct {
-	Path string
+	Path   string
 	Course string
-	Name string
+	Name   string
+}
+
+func Afunction(path, url string) {
+	utils.DownloadFile(path, url)
+	waitgroup.Done()
+	fmt.Println("download ok => name: " + path + " || url: " + url)
+}
+
+func GetFiles(courseId, getCourseFileApi string) Result {
+	if courseId != "" {
+		getCourseFileApi += "?lesson_id=" + courseId
+	}
+
+	resp, err := http.Get(getCourseFileApi)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var res Result
+	json.Unmarshal(body, &res)
+
+	return res
 }
 
 func main() {
 	fmt.Println("欢迎使用课程习题与单词下载工具....")
 
-	isdebug := false
+	isdebug := true
 
 	var outPutPath string
 	var getCourseFileApi string
@@ -41,40 +72,25 @@ func main() {
 	fmt.Println("请输入课程ID：(注：不填为所有课程)，下载文件到 '习题单词库' 文件夹下")
 	fmt.Scanln(&courseId)
 
-	if courseId != "" {
-		getCourseFileApi += "?lesson_id=" + courseId
-	}
-
-	resp, err := http.Get(getCourseFileApi)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		// handle error
-		fmt.Println(err)
-	}
-
-	var res Result
-	json.Unmarshal(body, &res)
-
+	res := GetFiles(courseId, getCourseFileApi)
 	if res.Status {
 		files := res.Data
 
-		fmt.Printf("一共%d个文件\n", len(files))
+		task_count := len(files)
+
+		fmt.Printf("一共%d个文件\n", task_count)
 
 		for i := 0; i < len(files); i++ {
 			file := files[i]
-			fmt.Println(file)
 
 			downPath := outPutPath + file.Course + string(os.PathSeparator)
 			if _, err := os.Stat(downPath); err != nil {
 				os.MkdirAll(downPath, 0777)
 			}
 
-			utils.DownloadFile(downPath+ file.Name,file.Path)
+			waitgroup.Add(1)
+			go Afunction(downPath+file.Name, file.Path)
 		}
+		waitgroup.Wait()
 	}
 }
