@@ -54,7 +54,7 @@ func GetFiles(courseId, getCourseFileApi string) Result {
 func main() {
 	fmt.Println("欢迎使用课程习题与单词下载工具....")
 
-	isdebug := true
+	isdebug := false
 
 	var outPutPath string
 	var getCourseFileApi string
