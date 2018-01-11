@@ -25,7 +25,7 @@ func main() {
 	if isdebug {
 		outPutPath = "/Go/Test/课件资源/"
 		token = "TGuPYryS"
-		courseId = "42"
+		courseId = "d0114987141145795041a3xHWu"
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
 
@@ -41,9 +41,11 @@ func main() {
 	CommonReq.Data["cid"] = courseId
 
 	result := utils.ListWithMedias(CommonReq)
-	rows := result.Result.Rows
+	fmt.Println(result)
 
 	var files []utils.DownFile
+
+	rows := result.Result.Rows
 	for i := 0; i < len(rows); i++ {
 		chapterName := rows[i].Name
 		fmt.Println("=>1. " + chapterName)
