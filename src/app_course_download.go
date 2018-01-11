@@ -70,7 +70,7 @@ func main() {
 					//fmt.Println("=>=>=>=>4. time:" + image.Time + ", url:" + image.Url)
 
 					file := utils.DownFile{}
-					file.Name = courseName + "-" + lessonName + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
+					file.Name = courseName + "-" + lessonName + "-" + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
 					file.ChapterName = chapterName
 					file.LessonName = lessonName
 					file.Path = image.Url
@@ -80,10 +80,14 @@ func main() {
 		}
 	}
 
+	if len(courseName) <= 0 {
+		courseName = courseId
+	}
+
 	for i := 0; i < len(files); i++ {
 		file := files[i]
 
-		downCoursePutPath := outPutPath + courseId + string(os.PathSeparator)
+		downCoursePutPath := outPutPath + courseName + string(os.PathSeparator)
 		if _, err := os.Stat(downCoursePutPath); err != nil {
 			os.MkdirAll(downCoursePutPath, 0777)
 		}
