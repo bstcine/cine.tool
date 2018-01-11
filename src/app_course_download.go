@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-var CommonReq = utils.Request{"TGuPYryS", "cine.web", make(map[string]string)}
+var CommonReq = utils.Request{"", "cine.web", nil}
 
 var courseDownloadWaitGroup sync.WaitGroup
 
@@ -20,23 +20,28 @@ func main() {
 
 	var outPutPath string
 	var courseId string
+	var token string
 
 	if isdebug {
 		outPutPath = "/Go/Test/课件资源/"
-		os.MkdirAll(outPutPath, 0777)
+		token = "TGuPYryS"
+		courseId = "42"
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
+
+		for len(token) <=0 || len(courseId) <=0 {
+			token,courseId = GetArags()
+		}
 	}
 
-	fmt.Println("请输入课程ID：(注：不填为所有课程)，下载文件到 '习题单词库' 文件夹下")
-	fmt.Scanln(&courseId)
+	os.MkdirAll(outPutPath, 0777)
 
-	CommonReq.Data = make(map[string]string);
+	CommonReq.Token = token
+	CommonReq.Data = make(map[string]string)
 	CommonReq.Data["cid"] = courseId
-	result := utils.ListWithMedias(CommonReq)
 
+	result := utils.ListWithMedias(CommonReq)
 	rows := result.Result.Rows
-	fmt.Println(len(rows))
 
 	var files []utils.DownFile
 	for i := 0; i < len(rows); i++ {
@@ -75,7 +80,6 @@ func main() {
 		fmt.Println("")
 	}
 
-	fmt.Printf("一共%d个文件\n", len(files))
 	for i := 0; i < len(files); i++ {
 		file := files[i]
 
@@ -99,6 +103,18 @@ func main() {
 	}
 
 	courseDownloadWaitGroup.Wait()
+
+	var code string
+
+	fmt.Printf("一共有%d个文件，请输入任意键退出", len(files))
+	fmt.Scanln(&code)
+}
+
+func GetArags() (token,courseId string) {
+	fmt.Println("请输入 Token,CourseId 中间用空格隔开! 例如：")
+	fmt.Println("TGuPYryS 42")
+	fmt.Scanln(&token, &courseId)
+	return token,courseId
 }
 
 func HelloDown(path, url string) {
