@@ -20,6 +20,7 @@ func main() {
 
 	var outPutPath string
 	var courseId string
+	var courseName string
 	var token string
 
 	if isdebug {
@@ -29,8 +30,8 @@ func main() {
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
 
-		for len(token) <=0 || len(courseId) <=0 {
-			token,courseId = GetArags()
+		for len(token) <= 0 || len(courseId) <= 0 {
+			token, courseId, courseName = GetArags()
 		}
 	}
 
@@ -40,23 +41,21 @@ func main() {
 	CommonReq.Data = make(map[string]string)
 	CommonReq.Data["cid"] = courseId
 
-	result := utils.ListWithMedias(CommonReq)
-	fmt.Println(result)
-
 	var files []utils.DownFile
 
+	result := utils.ListWithMedias(CommonReq)
 	rows := result.Result.Rows
 	for i := 0; i < len(rows); i++ {
 		chapterName := rows[i].Name
-		fmt.Println("=>1. " + chapterName)
+		//fmt.Println("=>1. " + chapterName)
 		children := rows[i].Children;
 		for j := 0; j < len(children); j++ {
 			lessonName := children[j].Name
-			fmt.Println("=>=>2. " + lessonName)
+			//fmt.Println("=>=>2. " + lessonName)
 			medias := children[j].Medias;
 			for k := 0; k < len(medias); k++ {
 				media := medias[k]
-				fmt.Println("=>=>=>3. type:" + media.Type + ", url:" + media.Url)
+				//fmt.Println("=>=>=>3. type:" + media.Type + ", url:" + media.Url)
 
 				file := utils.DownFile{}
 				file.Name = strconv.Itoa(k+1) + path.Ext(media.Url)
@@ -68,10 +67,10 @@ func main() {
 				images := medias[k].Images
 				for l := 0; l < len(images); l++ {
 					image := images[l]
-					fmt.Println("=>=>=>=>4. time:" + image.Time + ", url:" + image.Url)
+					//fmt.Println("=>=>=>=>4. time:" + image.Time + ", url:" + image.Url)
 
 					file := utils.DownFile{}
-					file.Name = strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
+					file.Name = courseName + "-" + lessonName + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
 					file.ChapterName = chapterName
 					file.LessonName = lessonName
 					file.Path = image.Url
@@ -79,7 +78,6 @@ func main() {
 				}
 			}
 		}
-		fmt.Println("")
 	}
 
 	for i := 0; i < len(files); i++ {
@@ -112,11 +110,11 @@ func main() {
 	fmt.Scanln(&code)
 }
 
-func GetArags() (token,courseId string) {
+func GetArags() (token, courseId, courseName string) {
 	fmt.Println("请输入 Token,CourseId 中间用空格隔开! 例如：")
-	fmt.Println("TGuPYryS 42")
-	fmt.Scanln(&token, &courseId)
-	return token,courseId
+	fmt.Println("TGuPYryS 42 动物农庄")
+	fmt.Scanln(&token, &courseId, &courseName)
+	return token, courseId, courseName
 }
 
 func HelloDown(path, url string) {

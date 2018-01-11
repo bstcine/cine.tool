@@ -84,7 +84,7 @@ func ListWithMedias(request Request) ResListWithMedia {
 
 	jsonBytes, _ := json.Marshal(request)
 
-	fmt.Println(string(jsonBytes))
+	fmt.Println("======== 网络请求中 > body: " + string(jsonBytes))
 
 	resp, err := http.Post(url,"application/json", bytes.NewBuffer(jsonBytes))
 	if err != nil {
@@ -96,6 +96,8 @@ func ListWithMedias(request Request) ResListWithMedia {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println("======== 网络请求成功 > body: " + string(body))
 
 	var res ResListWithMedia
 	json.Unmarshal(body, &res)
