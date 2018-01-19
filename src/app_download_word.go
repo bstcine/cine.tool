@@ -7,10 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"./utils"
-	"sync"
 )
-
-var waitgroup sync.WaitGroup
 
 type Result struct {
 	Status bool
@@ -21,12 +18,6 @@ type CineFile struct {
 	Path   string
 	Course string
 	Name   string
-}
-
-func Afunction(path, url string) {
-	utils.DownloadFile(path, url)
-	waitgroup.Done()
-	fmt.Println("download ok => name: " + path + " || url: " + url)
 }
 
 func GetFiles(courseId, getCourseFileApi string) Result {
@@ -88,9 +79,16 @@ func main() {
 				os.MkdirAll(downPath, 0777)
 			}
 
-			waitgroup.Add(1)
-			go Afunction(downPath+file.Name, file.Path)
+			go GoDownload(downPath+file.Name, file.Path)
 		}
-		waitgroup.Wait()
+	}
+}
+
+func GoDownload(path, url string) {
+	err := utils.DownloadFile(path, url)
+	if err != nil {
+		fmt.Println("download error => url: " + url)
+	}else {
+		fmt.Println("download ok => url: " + url)
 	}
 }
