@@ -3,15 +3,12 @@ package main
 import (
 	"utils"
 	"fmt"
-	"sync"
 	"os"
 	"strconv"
 	"path"
 )
 
 var CommonReq = utils.Request{"", "cine.web", nil}
-
-var courseDownloadWaitGroup sync.WaitGroup
 
 func main() {
 	fmt.Println("欢迎使用课程资源下载工具....")
@@ -25,8 +22,8 @@ func main() {
 
 	if isdebug {
 		outPutPath = "/Go/Test/课件资源/"
-		token = "TGuPYryS"
-		courseId = "d0114987141145795041a3xHWu"
+		token = "9f6jP45S"
+		courseId = "d011503974382830Tcne3UQckf"
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
 
@@ -102,11 +99,8 @@ func main() {
 			os.MkdirAll(downLessonPath, 0777)
 		}
 
-		courseDownloadWaitGroup.Add(1)
-		go HelloDown(downLessonPath+file.Name, file.Path)
+		HelloDown(downLessonPath+file.Name, file.Path)
 	}
-
-	courseDownloadWaitGroup.Wait()
 
 	var code string
 
@@ -122,7 +116,10 @@ func GetArags() (token, courseId, courseName string) {
 }
 
 func HelloDown(path, url string) {
-	utils.DownloadFile(path, url)
-	courseDownloadWaitGroup.Done()
-	fmt.Println("download ok => name: " + path + " || url: " + url)
+	err := utils.DownloadFile(path, url)
+	if err != nil {
+		fmt.Println("download error => url: " + url)
+	}else {
+		fmt.Println("download ok => url: " + url)
+	}
 }
