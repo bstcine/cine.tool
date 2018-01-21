@@ -65,6 +65,10 @@ func CheckLogoFile(logoPath string) {
 图片压缩 - nfnf-reszie
 */
 func ResizeImg(oidPath, newPath, oidName, newName string) {
+	ResizeImgWH(0,0,oidPath,newPath,oidName,newName)
+}
+
+func ResizeImgWH(width uint,height uint,oidPath, newPath, oidName, newName string) {
 	file, err := os.Open(oidPath + oidName)
 	if err != nil {
 		log.Fatal(err)
@@ -81,7 +85,7 @@ func ResizeImg(oidPath, newPath, oidName, newName string) {
 	}
 	file.Close()
 
-	m := resize.Resize(0, 0, img, resize.Bilinear)
+	m := resize.Resize(width, height, img, resize.Bicubic)
 
 	out, err := os.Create(newPath + newName)
 	if err != nil {

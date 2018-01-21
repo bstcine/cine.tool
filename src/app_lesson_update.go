@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./utils"
+	"utils"
 	"database/sql"
 	"encoding/json"
 	"fmt"

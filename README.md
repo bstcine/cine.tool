@@ -10,6 +10,17 @@
       $  cd cine.tool
       $  go build -o bin/app_compress src/app_compress.go
       ```
+- ### 图片压缩工具-Build
+   - Window(exe)
+      ```
+      $  cd cine.tool
+      $  CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_compress_image.exe src/app_compress_image.go
+      ```
+   - Mac
+      ```
+      $  cd cine.tool
+      $  go build -o bin/app_compress_image src/app_compress_image.go
+      ```
 - ### 词汇习题下载工具-Build
    - Window(exe)
       ```
