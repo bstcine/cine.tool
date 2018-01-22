@@ -18,6 +18,10 @@ func main() {
 	if !debug {
 		localPath = utils.GetCurPath()
 		outPutPath = utils.GetOutPath("compress")
+
+		fmt.Println("请输入 width,height 中间用空格隔开! 例如：")
+		fmt.Println("800 450")
+		fmt.Scanln(&imgWidth, &imgHeight)
 	}
 
 	//创建输出目录
@@ -38,4 +42,8 @@ func main() {
 	var code string
 	fmt.Printf("请输入任意键退出")
 	fmt.Scanln(&code)
+}
+
+func GetImageArags() (width, height uint) {
+	return width, height
 }
