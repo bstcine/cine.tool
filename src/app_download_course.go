@@ -77,7 +77,7 @@ func main() {
 		}
 	}
 
-	if len(courseName) <= 0 {
+	if len(courseName) <= 0 || courseName == "" {
 		courseName = courseId
 	}
 
@@ -99,7 +99,7 @@ func main() {
 			os.MkdirAll(downLessonPath, 0777)
 		}
 
-		HelloDown(downLessonPath+file.Name, file.Path)
+		utils.DownloadFile(file.Path, downLessonPath)
 	}
 
 	var code string
@@ -113,13 +113,4 @@ func GetArags() (token, courseId, courseName string) {
 	fmt.Println("TGuPYryS 42 动物农庄")
 	fmt.Scanln(&token, &courseId, &courseName)
 	return token, courseId, courseName
-}
-
-func HelloDown(path, url string) {
-	err := utils.DownloadFile(path, url)
-	if err != nil {
-		fmt.Println("download error => url: " + url)
-	}else {
-		fmt.Println("download ok => url: " + url)
-	}
 }

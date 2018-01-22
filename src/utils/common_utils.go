@@ -3,63 +3,10 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
-	"net/http"
-	"io"
 )
-
-/**
-获取当前路径
-*/
-func GetCurPath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	ret := path[:index] + string(os.PathSeparator)
-	return ret
-}
-
-/**
-获取输出路径
-*/
-func GetOutPath(dir string) string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	ret := path[:index] + string(os.PathSeparator) + dir + string(os.PathSeparator)
-	return ret
-}
-
-/**
-下载文件
- */
-func DownloadFile(filepath string, url string) (err error) {
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil  {
-		return err
-	}
-	defer out.Close()
-
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Writer the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil  {
-		return err
-	}
-
-	return nil
-}
 
 /**
 获取图片和音频

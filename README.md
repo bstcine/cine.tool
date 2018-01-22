@@ -41,5 +41,5 @@
    - Mac
       ```
       $  cd cine.tool
-      $  go build -o bin/app_course_download src/app_download_course.go
+      $  go build -o bin/app_download_course src/app_download_course.go
       ```
