@@ -79,16 +79,7 @@ func main() {
 				os.MkdirAll(downPath, 0777)
 			}
 
-			go GoDownload(downPath+file.Name, file.Path)
+			utils.DownloadFile(downPath+file.Name, file.Path)
 		}
-	}
-}
-
-func GoDownload(path, url string) {
-	err := utils.DownloadFile(path, url)
-	if err != nil {
-		fmt.Println("download error => url: " + url)
-	}else {
-		fmt.Println("download ok => url: " + url)
 	}
 }

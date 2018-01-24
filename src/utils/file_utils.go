@@ -9,7 +9,6 @@ import (
 	"log"
 	"fmt"
 	"path"
-	"bytes"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -106,23 +105,18 @@ func PrintDownloadPercent(done chan int64, path string, total int64) {
 /**
 下载文件
  */
-func DownloadFile(url string, dest string) {
+func DownloadFile(url string, outPath string) {
 
 	file := path.Base(url)
 
 	log.Printf("Downloading file %s from %s\n", file, url)
 
-	var path bytes.Buffer
-	path.WriteString(dest)
-	path.WriteString(string(os.PathSeparator))
-	path.WriteString(file)
-
 	start := time.Now()
 
-	out, err := os.Create(path.String())
+	out, err := os.Create(outPath)
 
 	if err != nil {
-		fmt.Println(path.String())
+		fmt.Println(outPath)
 		panic(err)
 	}
 
@@ -144,7 +138,7 @@ func DownloadFile(url string, dest string) {
 
 	done := make(chan int64)
 
-	go PrintDownloadPercent(done, path.String(), int64(size))
+	go PrintDownloadPercent(done, outPath, int64(size))
 
 	resp, err := http.Get(url)
 

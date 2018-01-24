@@ -30,6 +30,10 @@ func main() {
 		for len(token) <= 0 || len(courseId) <= 0 {
 			token, courseId, courseName = GetArags()
 		}
+
+		if len(courseName) <= 0 || courseName == "" {
+			courseName = courseId
+		}
 	}
 
 	os.MkdirAll(outPutPath, 0777)
@@ -77,10 +81,6 @@ func main() {
 		}
 	}
 
-	if len(courseName) <= 0 || courseName == "" {
-		courseName = courseId
-	}
-
 	for i := 0; i < len(files); i++ {
 		file := files[i]
 
@@ -99,7 +99,7 @@ func main() {
 			os.MkdirAll(downLessonPath, 0777)
 		}
 
-		utils.DownloadFile(file.Path, downLessonPath)
+		utils.DownloadFile(file.Path, downLessonPath+file.Name)
 	}
 
 	var code string
