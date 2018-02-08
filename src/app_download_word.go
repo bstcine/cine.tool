@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"os"
-	"utils"
+	"./utils"
 )
 
 type Result struct {

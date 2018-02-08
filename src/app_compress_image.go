@@ -1,7 +1,7 @@
 package main
 
 import (
-	"utils"
+	"./utils"
 	"os"
 	"fmt"
 )
