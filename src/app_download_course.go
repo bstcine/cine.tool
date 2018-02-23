@@ -1,6 +1,7 @@
 package main
 
 import (
+	"./model"
 	"./utils"
 	"fmt"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"path"
 )
 
-var CommonReq = utils.Request{"", "cine.web", nil}
+var CommonReq = model.Request{"", "cine.web", nil}
 
 func main() {
 	fmt.Println("欢迎使用课程资源下载工具....")
@@ -42,10 +43,9 @@ func main() {
 	CommonReq.Data = make(map[string]string)
 	CommonReq.Data["cid"] = courseId
 
-	var files []utils.DownFile
+	var files []model.DownFile
 
-	result := utils.ListWithMedias(CommonReq)
-	rows := result.Result.Rows
+	_,rows := utils.ListWithMedias(CommonReq)
 	for i := 0; i < len(rows); i++ {
 		chapterName := rows[i].Name
 		//fmt.Println("=>1. " + chapterName)
@@ -58,7 +58,7 @@ func main() {
 				media := medias[k]
 				//fmt.Println("=>=>=>3. type:" + media.Type + ", url:" + media.Url)
 
-				file := utils.DownFile{}
+				file := model.DownFile{}
 				file.Name = strconv.Itoa(k+1) + path.Ext(media.Url)
 				file.ChapterName = chapterName
 				file.LessonName = lessonName
@@ -70,7 +70,7 @@ func main() {
 					image := images[l]
 					//fmt.Println("=>=>=>=>4. time:" + image.Time + ", url:" + image.Url)
 
-					file := utils.DownFile{}
+					file := model.DownFile{}
 					file.Name = courseName + "-" + lessonName + "-" + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
 					file.ChapterName = chapterName
 					file.LessonName = lessonName
