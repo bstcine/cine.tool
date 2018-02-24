@@ -9,43 +9,62 @@ import (
 	"path"
 )
 
-var CommonReq = model.Request{"", "cine.web", nil}
-
 func main() {
 	fmt.Println("欢迎使用课程资源下载工具....")
 
-	isdebug := false
+	var debug = false
+
+	var login string
+	var password string
+
+	var courseId string
+	var lessonId string
+	var courseName string
 
 	var outPutPath string
-	var courseId string
-	var courseName string
-	var token string
 
-	if isdebug {
-		outPutPath = "/Go/Test/课件资源/"
-		token = "9f6jP45S"
+	if debug {
+		login = "xxx"
+		password = "123"
 		courseId = "d011503974382830Tcne3UQckf"
-	} else {
-		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
+		lessonId = "d011504248088023Y3ckCRhuyP"
+		courseName = courseId
 
-		for len(token) <= 0 || len(courseId) <= 0 {
-			token, courseId, courseName = GetArags()
+		outPutPath = "/Test/课件资源/"
+	} else {
+		for len(login) <= 0 || len(password) <= 0 || len(courseId) <= 0 {
+			login, password, courseId, lessonId, courseName = getDownloadArags()
 		}
 
 		if len(courseName) <= 0 || courseName == "" {
 			courseName = courseId
 		}
+
+		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
 	}
 
 	os.MkdirAll(outPutPath, 0777)
 
-	CommonReq.Token = token
-	CommonReq.Data = make(map[string]string)
-	CommonReq.Data["cid"] = courseId
+	sitecode := "cine.web"
+
+	data := make(map[string]interface{})
+	data["phone"] = login
+	data["password"] = password
+	_, token := utils.Signin(model.Request{"", sitecode, data})
+
+	if len(token) <= 0 || token == "" {
+		fmt.Println("no token")
+		return
+	}
+
+	data = make(map[string]interface{})
+	data["cid"] = courseId
+	if lessonId != "-1" && !(len(lessonId) <= 0 || lessonId == "") {
+		data["filter"] = []string{lessonId}
+	}
+	_, rows := utils.ListWithMedias(model.Request{token, sitecode, data})
 
 	var files []model.DownFile
-
-	_,rows := utils.ListWithMedias(CommonReq)
 	for i := 0; i < len(rows); i++ {
 		chapterName := rows[i].Name
 		//fmt.Println("=>1. " + chapterName)
@@ -108,9 +127,10 @@ func main() {
 	fmt.Scanln(&code)
 }
 
-func GetArags() (token, courseId, courseName string) {
-	fmt.Println("请输入 Token,CourseId 中间用空格隔开! 例如：")
-	fmt.Println("TGuPYryS 42 动物农庄")
-	fmt.Scanln(&token, &courseId, &courseName)
-	return token, courseId, courseName
+func getDownloadArags() (login, password, courseId, lessonId, courseName string) {
+	fmt.Println("请输入 User,Password,CourseId,LessonId,CourseName 中间用空格隔开!")
+	fmt.Println("注释：lessonId：-1时，下载所有Lesson")
+	fmt.Println("例如：user password 42 -1 动物农庄")
+	fmt.Scanln(&login, &password, &courseId, &lessonId, &courseName)
+	return login, password, courseId, lessonId, courseName
 }
