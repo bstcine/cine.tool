@@ -1,11 +1,19 @@
 package model
 
-type Response struct {
+type ResList struct {
 	Code             string     `json:"code"`
 	Code_desc        string     `json:"code_desc"`
 	Except_case      string     `json:"except_case"`
 	Except_case_desc string     `json:"except_case_desc"`
 	Result           ResultList `json:"result"`
+}
+
+type Res struct {
+	Code             string                 `json:"code"`
+	Code_desc        string                 `json:"code_desc"`
+	Except_case      string                 `json:"except_case"`
+	Except_case_desc string                 `json:"except_case_desc"`
+	Result           map[string]interface{} `json:"result"`
 }
 
 type ResultList struct {
