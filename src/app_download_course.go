@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"path"
+	"strings"
 )
 
 func main() {
@@ -17,6 +18,7 @@ func main() {
 	var login string
 	var password string
 
+	var fileType string
 	var courseId string
 	var lessonId string
 	var courseName string
@@ -26,14 +28,15 @@ func main() {
 	if debug {
 		login = "xxx"
 		password = "123"
+		fileType = "0"
 		courseId = "d011503974382830Tcne3UQckf"
 		lessonId = "d011504248088023Y3ckCRhuyP"
 		courseName = courseId
 
 		outPutPath = "/Test/课件资源/"
 	} else {
-		for len(login) <= 0 || len(password) <= 0 || len(courseId) <= 0 {
-			login, password, courseId, lessonId, courseName = getDownloadArags()
+		for len(login) <= 0 || len(password) <= 0 || len(fileType) <= 0 || len(courseId) <= 0 {
+			login, password,fileType,courseId, lessonId, courseName = getDownloadArags()
 		}
 
 		if len(courseName) <= 0 || courseName == "" {
@@ -81,7 +84,7 @@ func main() {
 				file.Name = strconv.Itoa(k+1) + path.Ext(media.Url)
 				file.ChapterName = chapterName
 				file.LessonName = lessonName
-				file.Path = media.Url
+				file.Path = getUrlByType(fileType,media.Url)
 				files = append(files, file)
 
 				images := medias[k].Images
@@ -93,7 +96,7 @@ func main() {
 					file.Name = courseName + "-" + lessonName + "-" + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
 					file.ChapterName = chapterName
 					file.LessonName = lessonName
-					file.Path = image.Url
+					file.Path = getUrlByType(fileType,image.Url)
 					files = append(files, file)
 				}
 			}
@@ -127,10 +130,27 @@ func main() {
 	fmt.Scanln(&code)
 }
 
-func getDownloadArags() (login, password, courseId, lessonId, courseName string) {
-	fmt.Println("请输入 User,Password,CourseId,LessonId,CourseName 中间用空格隔开!")
-	fmt.Println("注释：lessonId：-1时，下载所有Lesson")
-	fmt.Println("例如：user password 42 -1 动物农庄")
-	fmt.Scanln(&login, &password, &courseId, &lessonId, &courseName)
-	return login, password, courseId, lessonId, courseName
+func getDownloadArags() (login, password, fileType, courseId, lessonId, courseName string) {
+	fmt.Println("请输入 User,Password,Type,CourseId,LessonId,CourseName 中间用空格隔开!")
+	fmt.Println("注释：Type:(0:压缩文件，1：原始文件) 、 LessonId：(-1:下载所有)")
+	fmt.Println("例如：user password 0 42 -1 动物农庄")
+	fmt.Scanln(&login, &password, &fileType, &courseId, &lessonId, &courseName)
+	return login, password, fileType, courseId, lessonId, courseName
+}
+
+func getUrlByType(fileType,url string) string {
+	if fileType != "1" {
+		return url
+	}
+
+	url = url[strings.Index(url, "/f/")+3:len(url)]
+
+	lastIndex := strings.LastIndex(url, "/") + 1
+
+	srcPrefix := url[0:lastIndex]
+	srcName := url[lastIndex:len(url)]
+	srcName = strings.Replace(srcName, ".png.jpg", ".png", -1)
+	srcName = strings.Replace(srcName, ".jpg.jpg", ".jpg", -1)
+
+	return "http://www.bstcine.com/f/" + srcPrefix + srcName
 }
