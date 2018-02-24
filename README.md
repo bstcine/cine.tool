@@ -51,3 +51,16 @@
       $ cd cine.tool
       $ go build -o bin/app_download_course src/app_download_course.go
       ```
+- ### 获取课件资源(http.list)-Build
+   - Window(exe)
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_course_file.exe src/app_course_file.go
+      ```
+   - Mac
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ go build -o bin/app_course_file src/app_course_file.go
+      ```

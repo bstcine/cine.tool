@@ -3,60 +3,71 @@ package main
 import (
 	"fmt"
 	"strings"
+	"os"
 	"./utils"
 	"./model"
-	"os"
 )
 
 func main() {
-	var debug = true
-	var inputArgs model.InputArgs
+	var debug = false
+
+	var login string
+	var password string
+	var courseId string
+	var outPutPath string
 
 	if debug {
-		inputArgs.LocalPath = "/Test/"
-		inputArgs.OutputPath = "/Test/"
+		login = "kim"
+		password = "123"
+		courseId = "d011503974382830Tcne3UQckf"
+
+		outPutPath = "/Test/"
 	} else {
-		inputArgs.LocalPath = utils.GetCurPath()
-		inputArgs.OutputPath = utils.GetCurPath()
+		for len(login) <= 0 || len(password) <= 0 || len(courseId) <= 0 {
+			login, password, courseId = getArags()
+		}
+
+		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
 	}
 
 	data := make(map[string]string)
-	data["phone"] = "kim"
-	data["password"] = "123"
+	data["phone"] = login
+	data["password"] = password
 	req := model.Request{"", "cine.web", data}
 	_, token := utils.Signin(req)
 	fmt.Println(token)
 
-	data["cid"] = "42"
+	data["cid"] = courseId
 	req = model.Request{token, "cine.web", data}
 	_, rows := utils.ListWithMedias(req)
 
 	var files []string
 
 	for i := 0; i < len(rows); i++ {
-		//fmt.Println("=>1. " + chapterName)
 		children := rows[i].Children;
 		for j := 0; j < len(children); j++ {
-			//fmt.Println("=>=>2. " + lessonName)
 			medias := children[j].Medias;
 			for k := 0; k < len(medias); k++ {
 				media := medias[k]
 				files = append(files, regUrl(media.Url))
-				//fmt.Println("=>=>=>3. type:" + media.Type + ", url:" + media.Url)
 
 				images := medias[k].Images
 				for l := 0; l < len(images); l++ {
 					image := images[l]
 					files = append(files, regUrl(image.Url))
-					//fmt.Println("=>=>=>=>4. time:" + image.Time + ", url:" + image.Url)
 				}
 			}
 		}
 	}
 
-	fmt.Println(files)
+	utils.WriteLines(files, outPutPath+"http.list")
+}
 
-	utils.WriteLines(files, inputArgs.OutputPath+string(os.PathSeparator)+"http.list")
+func getArags() (login, password, courseId string) {
+	fmt.Println("请输入 User,Password,CourseId 中间用空格隔开! 例如：")
+	fmt.Println("user password 42")
+	fmt.Scanln(&login, &password, &courseId)
+	return login, password, courseId
 }
 
 func regUrl(url string) string {
