@@ -2,21 +2,15 @@ package main
 
 import (
 	"./utils"
+	"./model"
 	"bufio"
 	"fmt"
 	"os"
 )
 
-type InputArgs struct {
-	OutputPath string /** 输出目录 */
-	LocalPath  string /** 输入的目录或文件路径 */
-	LogoPath   string /** 水印图片名称*/
-}
-
-var inputArgs InputArgs
-
 func main() {
-	debug := true
+	var debug = true
+	var inputArgs model.InputArgs
 
 	if debug {
 		inputArgs.LocalPath = "/Volumes/Go/test/"
