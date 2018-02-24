@@ -30,7 +30,7 @@ func main() {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
 	}
 
-	data := make(map[string]string)
+	data := make(map[string]interface{})
 	data["phone"] = login
 	data["password"] = password
 	req := model.Request{"", "cine.web", data}
