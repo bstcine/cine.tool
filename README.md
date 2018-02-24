@@ -62,5 +62,8 @@
       ```
       $ git clone https://github.com/bstcine/cine.tool.git
       $ cd cine.tool
+      $ go get github.com/nfnt/resize
+      
       $ go build -o bin/app_course_file src/app_course_file.go
+      $ ./bin/app_course_file
       ```
