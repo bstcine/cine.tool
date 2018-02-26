@@ -19,7 +19,7 @@ func main() {
 	if debug {
 		login = "kim"
 		password = "123"
-		courseId = "d011503974382830Tcne3UQckf"
+		courseId = "d0114987070071216e0wtYHMZj,d011499750829444sJyNV5gcuc"
 
 		outPutPath = "/Test/"
 	} else {
@@ -37,24 +37,28 @@ func main() {
 	_, token := utils.Signin(req)
 	fmt.Println(token)
 
-	data["cid"] = courseId
-	req = model.Request{token, "cine.web", data}
-	_, rows := utils.ListWithMedias(req)
-
 	var files []string
 
-	for i := 0; i < len(rows); i++ {
-		children := rows[i].Children;
-		for j := 0; j < len(children); j++ {
-			medias := children[j].Medias;
-			for k := 0; k < len(medias); k++ {
-				media := medias[k]
-				files = append(files, regUrl(media.Url))
+	cids := strings.Split(courseId,",")
 
-				images := medias[k].Images
-				for l := 0; l < len(images); l++ {
-					image := images[l]
-					files = append(files, regUrl(image.Url))
+	for ii := 0; ii < len(cids); ii++ {
+		data["cid"] = cids[ii]
+		req = model.Request{token, "cine.web", data}
+		_, rows := utils.ListWithMedias(req)
+
+		for i := 0; i < len(rows); i++ {
+			children := rows[i].Children;
+			for j := 0; j < len(children); j++ {
+				medias := children[j].Medias;
+				for k := 0; k < len(medias); k++ {
+					media := medias[k]
+					files = append(files, regUrl(media.Url))
+
+					images := medias[k].Images
+					for l := 0; l < len(images); l++ {
+						image := images[l]
+						files = append(files, regUrl(image.Url))
+					}
 				}
 			}
 		}
