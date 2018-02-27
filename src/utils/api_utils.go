@@ -36,6 +36,29 @@ func Signin(request model.Request)(res model.Res,token string){
 	return res, res.Result["token"].(string)
 }
 
+func GetFiles(password,fileType,cid string) (res map[string] interface{},data []interface{}) {
+	url := API_BASE_URL + "/api/tool/files?password="+password+"&type="+fileType+"&cid="+cid
+
+	fmt.Println("======== 网络请求中 > ")
+
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("======== 网络请求成功 > body: " + string(body))
+
+	json.Unmarshal(body, &res)
+
+	return res, res["data"].([]interface{})
+}
+
 func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chapter) {
 	url := API_BASE_URL + "/api/content/chapter/listWithMedia"
 
