@@ -18,7 +18,7 @@ func main() {
 	if debug {
 		password = ""
 		fileType = "0"
-		courseId = "42"
+		courseId = "d011502846526016MpDBrnsR8p"
 
 		outPutPath = "/Test/"
 	} else {
@@ -35,13 +35,11 @@ func main() {
 	for i := 0; i < len(rows); i++ {
 		row := rows[i]
 
-		if !strings.Contains(row.(string),"com") {
-			kjFiles = append(kjFiles, regUrl(false, row.(string)))
-			kjOrigFiles = append(kjOrigFiles, regUrl(true, row.(string)))
-		}
+		kjFiles = append(kjFiles, regUrl(false, row.(string)))
+		kjOrigFiles = append(kjOrigFiles, regUrl(true, row.(string)))
 	}
-	utils.WriteLines(kjFiles, outPutPath+"kj_files.list")
-	utils.WriteLines(kjOrigFiles, outPutPath+"kj_orig_files.list")
+	utils.WriteLines(kjFiles, outPutPath+"kj.list")
+	utils.WriteLines(kjOrigFiles, outPutPath+"kj_orig.list")
 
 	fmt.Println(len(rows))
 }
@@ -54,21 +52,20 @@ func getArags() (password, fileType, courseId string) {
 	return password, fileType, courseId
 }
 
-func regUrl(isOrig bool, url string) string {
-	mediaUrl := url[strings.Index(url, "/f/")+3:len(url)]
+func regUrl(isOrig bool, param string) (url string) {
+	urls := strings.Split(param,";")
+
+	mediaUrl := urls[0]
+	urlPrefix := urls[1]
+	urlSuffix := urls[2]
 
 	if isOrig {
 		url = "http://www.bstcine.com/ f/" + mediaUrl
-	} else {
-		urls := strings.Split(url, "/")
-		srcType := urls[0]
-		courseId := urls[1]
+	} else if strings.Contains(urlPrefix,"http://gcdn.bstcine.com") {
+		urlPrefix = strings.Replace(urlPrefix,"/img/","/ img/",-1)
+		urlPrefix = strings.Replace(urlPrefix,"/mp3/","/ mp3/",-1)
 
-		if srcType == "img" {
-			mediaUrl += ".jpg"
-		}
-
-		url = "http://gcdn.bstcine.com/" + srcType + "/ " + courseId + "/f/" + mediaUrl
+		url = urlPrefix + mediaUrl + urlSuffix
 	}
 
 	fmt.Println(url)
