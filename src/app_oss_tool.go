@@ -7,7 +7,7 @@ import (
 	"./utils"
 )
 
-var cfgName = "oss.cfg"
+var cfgName = "app_oss.cfg"
 
 func main() {
 	var debug = false
