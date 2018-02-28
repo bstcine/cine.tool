@@ -15,7 +15,7 @@ var outPutPath string
 var argsMap map[string]string
 
 func main() {
-	var debug = true
+	var debug = false
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
@@ -43,7 +43,12 @@ func main() {
 获取资源清单
  */
 func getObjectList() {
-	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["listCourse"])
+	if argsMap["listType"] != "0" {
+		fmt.Println("暂时只支持获取课件资源")
+		return
+	}
+
+	_, rows := utils.GetFiles(argsMap["srcPassword"], argsMap["listType"], argsMap["listCourse"])
 
 	var kjFiles, kjCdnFiles []string
 	for i := 0; i < len(rows); i++ {
@@ -55,7 +60,7 @@ func getObjectList() {
 	utils.WriteLines(kjFiles, outPutPath+argsMap["listOutFileName"])
 	utils.WriteLines(kjCdnFiles, outPutPath+argsMap["listOutCdnFileName"])
 
-	fmt.Println(len(rows))
+	fmt.Printf("共有 %d 个资源",len(rows))
 }
 
 /**
@@ -118,6 +123,8 @@ func regUrl(isOrig bool, param string) (url string) {
 	urlPrefix := urls[1]
 	urlSuffix := urls[2]
 
+	fmt.Println(mediaUrl)
+
 	if isOrig {
 		url = "http://www.bstcine.com/ f/" + mediaUrl
 	} else if strings.Contains(urlPrefix, "http://gcdn.bstcine.com") {
@@ -126,8 +133,6 @@ func regUrl(isOrig bool, param string) (url string) {
 
 		url = urlPrefix + mediaUrl + urlSuffix
 	}
-
-	fmt.Println(url)
 	return url
 }
 
