@@ -5,15 +5,17 @@ import (
 	"strings"
 	"os"
 	"./utils"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
 var cfgName = "app_oss.cfg"
 
+var curPath string
+var outPutPath string
+var argsMap map[string]string
+
 func main() {
 	var debug = false
-
-	var curPath string
-	var outPutPath string
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
@@ -23,28 +25,90 @@ func main() {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
 	}
 
-	argsMap := utils.GetConfArgs(curPath+cfgName)
-	if argsMap == nil || len(argsMap) <=0 {
+	argsMap = utils.GetConfArgs(curPath + cfgName)
+	if argsMap == nil || len(argsMap) <= 0 {
 		fmt.Println("配置文件不存在")
 		return
 	}
 
 	if argsMap["srcType"] == "move" {
-		_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["moveCourse"])
-
-		var kjFiles, kjCdnFiles []string
-		for i := 0; i < len(rows); i++ {
-			row := rows[i]
-
-			kjCdnFiles = append(kjCdnFiles, regUrl(false, row.(string)))
-			kjFiles = append(kjFiles, regUrl(true, row.(string)))
-		}
-		utils.WriteLines(kjFiles, outPutPath+argsMap["moveOutFileName"])
-		utils.WriteLines(kjCdnFiles, outPutPath+argsMap["moveOutCdnFileName"])
-
-		fmt.Println(len(rows))
+		writeFileList()
+	} else if argsMap["srcType"] == "own" {
+		setOssObjectACL()
 	}
 
+}
+
+/**
+输出资源列表文件.list
+ */
+func writeFileList() {
+	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["moveCourse"])
+
+	var kjFiles, kjCdnFiles []string
+	for i := 0; i < len(rows); i++ {
+		row := rows[i]
+
+		kjCdnFiles = append(kjCdnFiles, regUrl(false, row.(string)))
+		kjFiles = append(kjFiles, regUrl(true, row.(string)))
+	}
+	utils.WriteLines(kjFiles, outPutPath+argsMap["moveOutFileName"])
+	utils.WriteLines(kjCdnFiles, outPutPath+argsMap["moveOutCdnFileName"])
+
+	fmt.Println(len(rows))
+}
+
+/**
+设置资源权限
+ */
+func setOssObjectACL() {
+	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["ownCourse"])
+
+	client, err := oss.New(argsMap["Endpoint"], argsMap["AccessKeyId"], argsMap["AccessKeySecret"])
+	if err != nil {
+		fmt.Println("Oss 访问请求失败，请检查网络或密钥等配置项")
+		return
+	}
+
+	bucket, err := client.Bucket(argsMap["Bucket"])
+	if err != nil {
+		fmt.Println("Oss Bucket 访问失败，请检查Bucket配置是否存在")
+		return
+	}
+
+	objectACL := oss.ACLDefault
+
+	switch argsMap["ownType"] {
+	case "default":
+		objectACL = oss.ACLDefault
+	case "public-read-write":
+		objectACL = oss.ACLPublicReadWrite
+	case "public-read":
+		objectACL = oss.ACLPublicRead
+	case "private":
+		objectACL = oss.ACLPrivate
+	}
+
+	for i := 0; i < len(rows); i++ {
+		row := rows[i]
+		urls := strings.Split(row.(string), ";")
+		mediaUrl := urls[0]
+		urlPrefix := urls[1]
+		urlSuffix := urls[2]
+
+		urlPrefix = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1)
+		objectKey := urlPrefix + mediaUrl + urlSuffix
+
+		// 设置Object的访问权限
+		err = bucket.SetObjectACL(objectKey, objectACL)
+		if err != nil {
+			// HandleError(err)
+			fmt.Println(err)
+		}else {
+			fmt.Println("http://oss.bstcine.com/"+objectKey)
+		}
+
+	}
 }
 
 func regUrl(isOrig bool, param string) (url string) {
