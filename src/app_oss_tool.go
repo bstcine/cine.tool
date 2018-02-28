@@ -15,8 +15,6 @@ func main() {
 	var curPath string
 	var outPutPath string
 
-	var argsMap = make(map[string]string)
-
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
 		outPutPath = "/Test/"
@@ -25,26 +23,10 @@ func main() {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
 	}
 
-	cfgPath := curPath + cfgName
-	if _, err := os.Stat(cfgPath); err != nil {
+	argsMap := utils.GetConfArgs(curPath+cfgName)
+	if argsMap == nil || len(argsMap) <=0 {
 		fmt.Println("配置文件不存在")
 		return
-	} else {
-		args, _ := utils.ReadLines(cfgPath)
-
-		for i := 0; i < len(args); i++ {
-			arg := args[i]
-			if !strings.Contains(arg, "#") {
-				argSplit := strings.Split(arg, "=")
-				if len(argSplit) > 1 {
-					argsMap[argSplit[0]] = argSplit[1]
-				} else {
-					argsMap[argSplit[0]] = ""
-				}
-			}
-		}
-
-		fmt.Println(argsMap)
 	}
 
 	if argsMap["srcType"] == "move" {

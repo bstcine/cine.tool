@@ -6,7 +6,33 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"os"
 )
+
+/**
+获取配置文件参数
+ */
+func GetConfArgs(path string) (argsMap map[string]string) {
+	if _, err := os.Stat(path); err != nil {
+		argsMap = nil
+	} else {
+		args, _ := ReadLines(path)
+		argsMap = make(map[string]string)
+
+		for i := 0; i < len(args); i++ {
+			arg := args[i]
+			if !strings.Contains(arg, "#") {
+				argSplit := strings.Split(arg, "=")
+				if len(argSplit) > 1 {
+					argsMap[argSplit[0]] = argSplit[1]
+				} else {
+					argsMap[argSplit[0]] = ""
+				}
+			}
+		}
+	}
+	return argsMap
+}
 
 /**
 获取图片和音频
