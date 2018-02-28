@@ -51,12 +51,12 @@
       $ cd cine.tool
       $ go build -o bin/app_download_course src/app_download_course.go
       ```
-- ### 获取课件资源(http.list)-Build
+- ### 阿里云 Oss 工具-Build
    - Window(exe)
       ```
       $ git clone https://github.com/bstcine/cine.tool.git
       $ cd cine.tool
-      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_course_file.exe src/app_course_file.go
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_oss_tool.exe src/app_oss_tool.go
       ```
    - Mac
       ```
@@ -64,6 +64,6 @@
       $ cd cine.tool
       $ go get github.com/nfnt/resize
       
-      $ go build -o bin/app_course_file src/app_course_file.go
-      $ ./bin/app_course_file
+      $ go build -o bin/app_oss_tool src/app_oss_tool.go
+      $ ./bin/app_oss_tool
       ```
