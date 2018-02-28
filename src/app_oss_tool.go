@@ -15,7 +15,7 @@ var outPutPath string
 var argsMap map[string]string
 
 func main() {
-	var debug = false
+	var debug = true
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
@@ -31,19 +31,19 @@ func main() {
 		return
 	}
 
-	if argsMap["srcType"] == "move" {
-		writeFileList()
-	} else if argsMap["srcType"] == "own" {
+	if argsMap["srcType"] == "list" {
+		getObjectList()
+	} else if argsMap["srcType"] == "acl" {
 		setOssObjectACL()
 	}
 
 }
 
 /**
-输出资源列表文件.list
+获取资源清单
  */
-func writeFileList() {
-	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["moveCourse"])
+func getObjectList() {
+	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["listCourse"])
 
 	var kjFiles, kjCdnFiles []string
 	for i := 0; i < len(rows); i++ {
@@ -52,8 +52,8 @@ func writeFileList() {
 		kjCdnFiles = append(kjCdnFiles, regUrl(false, row.(string)))
 		kjFiles = append(kjFiles, regUrl(true, row.(string)))
 	}
-	utils.WriteLines(kjFiles, outPutPath+argsMap["moveOutFileName"])
-	utils.WriteLines(kjCdnFiles, outPutPath+argsMap["moveOutCdnFileName"])
+	utils.WriteLines(kjFiles, outPutPath+argsMap["listOutFileName"])
+	utils.WriteLines(kjCdnFiles, outPutPath+argsMap["listOutCdnFileName"])
 
 	fmt.Println(len(rows))
 }
@@ -62,7 +62,7 @@ func writeFileList() {
 设置资源权限
  */
 func setOssObjectACL() {
-	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["ownCourse"])
+	_, rows := utils.GetFiles(argsMap["srcPassword"], "0", argsMap["aclCourse"])
 
 	client, err := oss.New(argsMap["Endpoint"], argsMap["AccessKeyId"], argsMap["AccessKeySecret"])
 	if err != nil {
@@ -78,7 +78,7 @@ func setOssObjectACL() {
 
 	objectACL := oss.ACLDefault
 
-	switch argsMap["ownType"] {
+	switch argsMap["aclType"] {
 	case "default":
 		objectACL = oss.ACLDefault
 	case "public-read-write":
@@ -105,7 +105,7 @@ func setOssObjectACL() {
 			// HandleError(err)
 			fmt.Println(err)
 		}else {
-			fmt.Println("http://oss.bstcine.com/"+objectKey)
+			fmt.Println("http://oss.bstcine.com/"+objectKey+" ==> acl set :" + argsMap["aclType"])
 		}
 
 	}
