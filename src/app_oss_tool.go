@@ -6,24 +6,45 @@ import (
 	"os"
 	"./utils"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"log"
 )
 
+var logName = "app_oss.log"
+var debugLog *log.Logger
+
 var cfgName = "app_oss.cfg"
+var serviceAppPath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
+var serviceKjPath = "/mnt/web/kj.bstcine.com/wwwroot/"
+var localKjPath string
 
 var curPath string
 var outPutPath string
 var argsMap map[string]string
 
+func handleError(err error) {
+	fmt.Println("Error:", err)
+	os.Exit(-1)
+}
+
 func main() {
-	var debug = false
+	var debug = true
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
 		outPutPath = "/Test/"
+		localKjPath = "/Test/wwwroot/"
 	} else {
 		curPath = utils.GetCurPath() + string(os.PathSeparator)
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
+		localKjPath = utils.GetCurPath() + string(os.PathSeparator) + "wwwroot" + string(os.PathSeparator)
 	}
+
+	logFile,err  := os.Create(outPutPath+logName)
+	defer logFile.Close()
+	if err != nil {
+		log.Fatalln("open file error !")
+	}
+	debugLog = log.New(logFile,"[Info]",log.Llongfile)
 
 	argsMap = utils.GetConfArgs(curPath + cfgName)
 	if argsMap == nil || len(argsMap) <= 0 {
@@ -31,8 +52,8 @@ func main() {
 		return
 	}
 
-	if argsMap["srcType"] == "list" {
-		getObjectList()
+	if argsMap["srcType"] == "migrate" {
+		migrateObject()
 	} else if argsMap["srcType"] == "acl" {
 		setOssObjectACL()
 	}
@@ -40,27 +61,90 @@ func main() {
 }
 
 /**
-获取资源清单
+资源迁移
  */
-func getObjectList() {
-	if argsMap["listType"] != "0" {
+func migrateObject() {
+	if argsMap["migrateType"] != "0" {
 		fmt.Println("暂时只支持获取课件资源")
 		return
 	}
 
-	_, rows := utils.GetFiles(argsMap["srcPassword"], argsMap["listType"], argsMap["listCourse"])
+	//迁移课程资源的类型 是否为原始资源
+	isCourseOrig := argsMap["migrateCourseType"] == "orig"
 
-	var kjFiles, kjCdnFiles []string
-	for i := 0; i < len(rows); i++ {
-		row := rows[i]
+	_, rows := utils.GetFiles(argsMap["srcPassword"], argsMap["migrateType"], argsMap["migrateCourse"])
 
-		kjCdnFiles = append(kjCdnFiles, regUrl(false, row.(string)))
-		kjFiles = append(kjFiles, regUrl(true, row.(string)))
+	if argsMap["migrateModel"] == "list" { //获取资源清单
+		var listFiles []string
+		for i := 0; i < len(rows); i++ {
+			row := rows[i]
+			listFiles = append(listFiles, regUrl(isCourseOrig, row.(string)))
+		}
+		utils.WriteLines(listFiles, outPutPath+argsMap["migrateListFileName"])
+
+		fmt.Printf("%s 课程,共有 %d 个 %s 资源,已经生成到 %s", argsMap["migrateCourse"], len(listFiles), argsMap["migrateCourseType"], outPutPath+argsMap["migrateListFileName"])
+	} else if argsMap["migrateModel"] == "local" { //本地资源上传
+		client, err := oss.New(argsMap["Endpoint"], argsMap["AccessKeyId"], argsMap["AccessKeySecret"])
+		if err != nil {
+			handleError(err)
+			return
+		}
+
+		bucket, err := client.Bucket(argsMap["Bucket"])
+		if err != nil {
+			handleError(err)
+			return
+		}
+
+		for i := 0; i < len(rows); i++ {
+			row := rows[i]
+			urls := strings.Split(row.(string), ";")
+
+			mediaUrl := urls[0]
+			urlPrefix := urls[1]
+			urlSuffix := urls[2]
+
+			var objectKey string
+			var objectPath string
+			var objectUrl string
+
+			if isCourseOrig {
+				objectKey = "kj/" + mediaUrl
+				objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+				objectPath = serviceAppPath + mediaUrl
+			} else {
+				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+				objectUrl = urlPrefix + mediaUrl + urlSuffix
+				objectPath = serviceKjPath + objectKey
+			}
+
+			isExist, err := bucket.IsObjectExist(objectKey)
+			if err != nil {
+				handleError(err)
+			}
+
+			if isExist {
+				log.Printf("%d/%d: %s 已经存在",i+1,len(rows),objectKey)
+				debugLog.Printf("%d/%d: %s 已经存在",i+1,len(rows),objectKey)
+				continue
+			}
+
+			if _, err := os.Stat(serviceAppPath); err != nil { //客户端
+				objectPath = downMedia(objectUrl)
+			}
+
+			err = bucket.PutObjectFromFile(objectKey, objectPath)
+			if err != nil {
+				handleError(err)
+			}else {
+				log.Printf("%d/%d: %s => %s 上传成功",i+1,len(rows),objectPath,objectKey)
+				debugLog.Printf("%d/%d: %s => %s 上传成功",i+1,len(rows),objectPath,objectKey)
+			}
+		}
 	}
-	utils.WriteLines(kjFiles, outPutPath+argsMap["listOutFileName"])
-	utils.WriteLines(kjCdnFiles, outPutPath+argsMap["listOutCdnFileName"])
 
-	fmt.Printf("共有 %d 个资源",len(rows))
+	fmt.Println("请输入任意键结算进程...")
+	fmt.Scanln()
 }
 
 /**
@@ -71,13 +155,13 @@ func setOssObjectACL() {
 
 	client, err := oss.New(argsMap["Endpoint"], argsMap["AccessKeyId"], argsMap["AccessKeySecret"])
 	if err != nil {
-		fmt.Println("Oss 访问请求失败，请检查网络或密钥等配置项")
+		handleError(err)
 		return
 	}
 
 	bucket, err := client.Bucket(argsMap["Bucket"])
 	if err != nil {
-		fmt.Println("Oss Bucket 访问失败，请检查Bucket配置是否存在")
+		handleError(err)
 		return
 	}
 
@@ -107,10 +191,10 @@ func setOssObjectACL() {
 		// 设置Object的访问权限
 		err = bucket.SetObjectACL(objectKey, objectACL)
 		if err != nil {
-			// HandleError(err)
-			fmt.Println(err)
-		}else {
-			fmt.Println("http://oss.bstcine.com/"+objectKey+" ==> acl set :" + argsMap["aclType"])
+			handleError(err)
+		} else {
+			log.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
+			debugLog.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
 		}
 
 	}
@@ -123,8 +207,6 @@ func regUrl(isOrig bool, param string) (url string) {
 	urlPrefix := urls[1]
 	urlSuffix := urls[2]
 
-	fmt.Println(mediaUrl)
-
 	if isOrig {
 		url = "http://www.bstcine.com/ f/" + mediaUrl
 	} else if strings.Contains(urlPrefix, "http://gcdn.bstcine.com") {
@@ -136,10 +218,18 @@ func regUrl(isOrig bool, param string) (url string) {
 	return url
 }
 
-func downMedia(mediaUrl string) {
-	downLessonPath := "/Test/f/" + mediaUrl[0:strings.LastIndex(mediaUrl, "/")+1]
-	if _, err := os.Stat(downLessonPath); err != nil {
-		os.MkdirAll(downLessonPath, 0777)
+func downMedia(url string) (downPath string) {
+	path := strings.Replace(url, "http://gcdn.bstcine.com/", "", -1)
+	path = strings.Replace(path, "http://www.bstcine.com/f/", "", -1)
+
+	downPrefix := localKjPath + path[0:strings.LastIndex(path, "/")+1]
+	if _, err := os.Stat(downPrefix); err != nil {
+		os.MkdirAll(downPrefix, 0777)
 	}
-	utils.DownloadFile("http://www.bstcine.com/f/"+mediaUrl, downLessonPath+mediaUrl[strings.LastIndex(mediaUrl, "/"):len(mediaUrl)])
+
+	downPath = localKjPath + path
+
+	utils.DownloadFile(url, downPath)
+
+	return downPath
 }
