@@ -27,7 +27,7 @@ func handleError(err error) {
 }
 
 func main() {
-	var debug = true
+	var debug = false
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
