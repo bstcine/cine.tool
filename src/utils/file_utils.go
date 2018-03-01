@@ -3,7 +3,6 @@ package utils
 import (
 	"os"
 	"net/http"
-	"strconv"
 	"io"
 	"time"
 	"log"
@@ -140,6 +139,11 @@ func PrintDownloadPercent(done chan int64, path string, total int64) {
  */
 func DownloadFile(url string, outPath string) {
 
+	dirPath := outPath[0:strings.LastIndex(outPath,"/")+1]
+	if _, err := os.Stat(dirPath); err != nil {
+		os.MkdirAll(dirPath, 0777)
+	}
+
 	file := path.Base(url)
 
 	log.Printf("Downloading file %s from %s\n", file, url)
@@ -163,15 +167,15 @@ func DownloadFile(url string, outPath string) {
 
 	defer headResp.Body.Close()
 
-	size, err := strconv.Atoi(headResp.Header.Get("Content-Length"))
+	//size, err := strconv.Atoi(headResp.Header.Get("Content-Length"))
 
 	if err != nil {
 		panic(err)
 	}
 
-	done := make(chan int64)
+	//done := make(chan int64)
 
-	go PrintDownloadPercent(done, outPath, int64(size))
+	//go PrintDownloadPercent(done, outPath, int64(size))
 
 	resp, err := http.Get(url)
 
@@ -181,13 +185,9 @@ func DownloadFile(url string, outPath string) {
 
 	defer resp.Body.Close()
 
-	n, err := io.Copy(out, resp.Body)
+	io.Copy(out, resp.Body)
 
-	if err != nil {
-		panic(err)
-	}
-
-	done <- n
+	//done <- n
 
 	elapsed := time.Since(start)
 	log.Printf("Download completed in %s", elapsed)

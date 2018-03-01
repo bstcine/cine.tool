@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"path"
 	"strings"
+	"sync"
 )
 
 func main() {
@@ -26,24 +27,24 @@ func main() {
 	var outPutPath string
 
 	if debug {
-		login = "xxx"
+		login = ""
 		password = "123"
 		fileType = "0"
-		courseId = "d011503974382830Tcne3UQckf"
-		lessonId = "d011504248088023Y3ckCRhuyP"
+		courseId = "d0114987070071216e0wtYHMZj"
+		lessonId = ""
 		courseName = courseId
 
 		outPutPath = "/Test/课件资源/"
 	} else {
 		for len(login) <= 0 || len(password) <= 0 || len(fileType) <= 0 || len(courseId) <= 0 {
-			login, password,fileType,courseId, lessonId, courseName = getDownloadArags()
+			login, password, fileType, courseId, lessonId, courseName = getDownloadArags()
 		}
 
 		if len(courseName) <= 0 || courseName == "" {
 			courseName = courseId
 		}
 
-		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "课件资源" + string(os.PathSeparator)
+		outPutPath = utils.GetCurPath() + "课件资源" + string(os.PathSeparator)
 	}
 
 	os.MkdirAll(outPutPath, 0777)
@@ -84,7 +85,7 @@ func main() {
 				file.Name = strconv.Itoa(k+1) + path.Ext(media.Url)
 				file.ChapterName = chapterName
 				file.LessonName = lessonName
-				file.Path = getUrlByType(fileType,media.Url)
+				file.Path = getUrlByType(fileType, media.Url)
 				files = append(files, file)
 
 				images := medias[k].Images
@@ -96,38 +97,37 @@ func main() {
 					file.Name = courseName + "-" + lessonName + "-" + strconv.Itoa(k+1) + "-" + image.Time + path.Ext(image.Url)
 					file.ChapterName = chapterName
 					file.LessonName = lessonName
-					file.Path = getUrlByType(fileType,image.Url)
+					file.Path = getUrlByType(fileType, image.Url)
 					files = append(files, file)
 				}
 			}
 		}
 	}
 
-	for i := 0; i < len(files); i++ {
-		file := files[i]
+	var maxGo = 8
+	for i := 0; i < len(files); i += maxGo {
+		tmp := files[i:i+8]
+		var wg sync.WaitGroup
+		wg.Add(maxGo)
+		for i := 0; i < maxGo; i++ {
+			file := tmp[i]
 
-		downCoursePutPath := outPutPath + courseName + string(os.PathSeparator)
-		if _, err := os.Stat(downCoursePutPath); err != nil {
-			os.MkdirAll(downCoursePutPath, 0777)
+			if file.Path == "" {
+				wg.Done()
+				continue
+			}
+
+			go func() {
+				downPath := outPutPath+courseName+string(os.PathSeparator)+file.ChapterName+string(os.PathSeparator)+file.LessonName+string(os.PathSeparator)+file.Name
+				utils.DownloadFile(file.Path, downPath)
+				wg.Done()
+			}()
 		}
-
-		downChapterPath := downCoursePutPath + file.ChapterName + string(os.PathSeparator)
-		if _, err := os.Stat(downChapterPath); err != nil {
-			os.MkdirAll(downChapterPath, 0777)
-		}
-
-		downLessonPath := downChapterPath + file.LessonName + string(os.PathSeparator)
-		if _, err := os.Stat(downLessonPath); err != nil {
-			os.MkdirAll(downLessonPath, 0777)
-		}
-
-		utils.DownloadFile(file.Path, downLessonPath+file.Name)
+		wg.Wait()
 	}
 
-	var code string
-
 	fmt.Printf("一共有%d个文件，请输入任意键退出", len(files))
-	fmt.Scanln(&code)
+	fmt.Scanln()
 }
 
 func getDownloadArags() (login, password, fileType, courseId, lessonId, courseName string) {
@@ -138,7 +138,7 @@ func getDownloadArags() (login, password, fileType, courseId, lessonId, courseNa
 	return login, password, fileType, courseId, lessonId, courseName
 }
 
-func getUrlByType(fileType,url string) string {
+func getUrlByType(fileType, url string) string {
 	if fileType != "1" {
 		return url
 	}
