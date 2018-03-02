@@ -129,7 +129,6 @@ func migrateObject() {
 					}
 
 					if isExist {
-						debugLog.Printf("%s 已经存在",objectKey)
 						results<- "worker " + strconv.Itoa(id) + ": " + objectKey + " 已经存在"
 						continue
 					}
@@ -143,7 +142,6 @@ func migrateObject() {
 					if err != nil {
 						handleError(err)
 					}else {
-						debugLog.Printf("%s => %s 上传成功",objectPath,objectKey)
 						results<- "worker " + strconv.Itoa(id) + ": " + objectPath + " => "+objectKey + " 上传成功"
 					}
 				}
@@ -157,6 +155,7 @@ func migrateObject() {
 
 		for a := 1; a <= len(rows); a++ {
 			fmt.Printf("%d/%d: %s",a,len(rows),<-results)
+			debugLog.Printf("%d/%d: %s",a,len(rows),<-results)
 		}
 	}
 
