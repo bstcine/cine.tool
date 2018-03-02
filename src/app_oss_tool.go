@@ -156,7 +156,7 @@ func migrateObject() {
 		close(jobs)
 
 		for a := 1; a <= len(rows); a++ {
-			fmt.Println(<-results)
+			fmt.Printf("%d/%d: %s",a,len(rows),<-results)
 		}
 	}
 
