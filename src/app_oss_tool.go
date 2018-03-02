@@ -7,6 +7,7 @@ import (
 	"./utils"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"log"
+	"strconv"
 )
 
 var logName = "app_oss.log"
@@ -96,54 +97,70 @@ func migrateObject() {
 			return
 		}
 
+		jobs := make(chan string, len(rows))
+		results := make(chan string, len(rows))
+
+		for w := 1; w <= 6; w++ {
+			go func(id int) {
+				for row:= range jobs {
+					urls := strings.Split(row, ";")
+
+					mediaUrl := urls[0]
+					urlPrefix := urls[1]
+					urlSuffix := urls[2]
+
+					var objectKey string
+					var objectPath string
+					var objectUrl string
+
+					if isCourseOrig {
+						objectKey = "kj/" + mediaUrl
+						objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+						objectPath = serviceAppPath + mediaUrl
+					} else {
+						objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+						objectUrl = urlPrefix + mediaUrl + urlSuffix
+						objectPath = serviceKjPath + objectKey
+					}
+
+					isExist, err := bucket.IsObjectExist(objectKey)
+					if err != nil {
+						handleError(err)
+					}
+
+					if isExist {
+						debugLog.Printf("%s 已经存在",objectKey)
+						results<- "worker " + strconv.Itoa(id) + ": " + objectKey + " 已经存在"
+						continue
+					}
+
+					if _, err := os.Stat(serviceAppPath); err != nil { //客户端
+						objectPath = localKjPath + objectKey
+						utils.DownloadFile(objectUrl, objectPath)
+					}
+
+					err = bucket.PutObjectFromFile(objectKey, objectPath)
+					if err != nil {
+						handleError(err)
+					}else {
+						debugLog.Printf("%s => %s 上传成功",objectPath,objectKey)
+						results<- "worker " + strconv.Itoa(id) + ": " + objectPath + " => "+objectKey + " 上传成功"
+					}
+				}
+			}(w)
+		}
+
 		for i := 0; i < len(rows); i++ {
-			row := rows[i]
-			urls := strings.Split(row.(string), ";")
+			jobs <- rows[i].(string)
+		}
+		close(jobs)
 
-			mediaUrl := urls[0]
-			urlPrefix := urls[1]
-			urlSuffix := urls[2]
-
-			var objectKey string
-			var objectPath string
-			var objectUrl string
-
-			if isCourseOrig {
-				objectKey = "kj/" + mediaUrl
-				objectUrl = "http://www.bstcine.com/f/" + mediaUrl
-				objectPath = serviceAppPath + mediaUrl
-			} else {
-				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
-				objectUrl = urlPrefix + mediaUrl + urlSuffix
-				objectPath = serviceKjPath + objectKey
-			}
-
-			isExist, err := bucket.IsObjectExist(objectKey)
-			if err != nil {
-				handleError(err)
-			}
-
-			if isExist {
-				log.Printf("%d/%d: %s 已经存在",i+1,len(rows),objectKey)
-				debugLog.Printf("%d/%d: %s 已经存在",i+1,len(rows),objectKey)
-				continue
-			}
-
-			if _, err := os.Stat(serviceAppPath); err != nil { //客户端
-				objectPath = downMedia(objectUrl)
-			}
-
-			err = bucket.PutObjectFromFile(objectKey, objectPath)
-			if err != nil {
-				handleError(err)
-			}else {
-				log.Printf("%d/%d: %s => %s 上传成功",i+1,len(rows),objectPath,objectKey)
-				debugLog.Printf("%d/%d: %s => %s 上传成功",i+1,len(rows),objectPath,objectKey)
-			}
+		for a := 1; a <= len(rows); a++ {
+			fmt.Println(<-results)
 		}
 	}
 
-	fmt.Println("请输入任意键结算进程...")
+	fmt.Println("请输入任意键结束...")
 	fmt.Scanln()
 }
 
@@ -216,20 +233,4 @@ func regUrl(isOrig bool, param string) (url string) {
 		url = urlPrefix + mediaUrl + urlSuffix
 	}
 	return url
-}
-
-func downMedia(url string) (downPath string) {
-	path := strings.Replace(url, "http://gcdn.bstcine.com/", "", -1)
-	path = strings.Replace(path, "http://www.bstcine.com/f/", "", -1)
-
-	downPrefix := localKjPath + path[0:strings.LastIndex(path, "/")+1]
-	if _, err := os.Stat(downPrefix); err != nil {
-		os.MkdirAll(downPrefix, 0777)
-	}
-
-	downPath = localKjPath + path
-
-	utils.DownloadFile(url, downPath)
-
-	return downPath
 }
