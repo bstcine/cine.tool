@@ -154,8 +154,9 @@ func migrateObject() {
 		close(jobs)
 
 		for a := 1; a <= len(rows); a++ {
-			fmt.Printf("%d/%d: %s \n",a,len(rows),<-results)
-			debugLog.Printf("%d/%d: %s",a,len(rows),<-results)
+			msg := <-results
+			fmt.Printf("%d/%d: %s \n",a,len(rows),msg)
+			debugLog.Printf("%d/%d: %s",a,len(rows),msg)
 		}
 	}
 
