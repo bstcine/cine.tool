@@ -34,6 +34,7 @@ func main() {
 		curPath = "/Go/Cine/cine.tool/assets/"
 		outPutPath = "/Test/"
 		localKjPath = "/Test/wwwroot/"
+		cfgName = "app_oss_tmp.cfg"
 	} else {
 		curPath = utils.GetCurPath() + string(os.PathSeparator)
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
