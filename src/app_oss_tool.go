@@ -14,8 +14,8 @@ var logName = "app_oss.log"
 var debugLog *log.Logger
 
 var cfgName = "app_oss.cfg"
-var serviceAppPath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
-var serviceKjPath = "/mnt/web/kj.bstcine.com/wwwroot/"
+var serviceFilePath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
+var serviceKjFilePath = "/mnt/web/kj.bstcine.com/wwwroot/"
 var localKjPath string
 
 var curPath string
@@ -98,6 +98,10 @@ func migrateObject() {
 			return
 		}
 
+		//是否在服务器运行
+		_,err = os.Stat(serviceFilePath)
+		isServiceRun := err == nil
+
 		jobs := make(chan string, len(rows))
 		results := make(chan string, len(rows))
 
@@ -111,17 +115,21 @@ func migrateObject() {
 					urlSuffix := urls[2]
 
 					var objectKey string
-					var objectPath string
 					var objectUrl string
+					var localPath string
 
 					if isCourseOrig {
 						objectKey = "kj/" + mediaUrl
 						objectUrl = "http://www.bstcine.com/f/" + mediaUrl
-						objectPath = serviceAppPath + mediaUrl
+						localPath = serviceFilePath + mediaUrl
 					} else {
 						objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
 						objectUrl = urlPrefix + mediaUrl + urlSuffix
-						objectPath = serviceKjPath + objectKey
+						localPath = serviceKjFilePath + objectKey
+
+						if strings.Contains(urlPrefix,"/mp3/") {
+							objectKey = "kj/" + mediaUrl
+						}
 					}
 
 					isExist, err := bucket.IsObjectExist(objectKey)
@@ -134,16 +142,16 @@ func migrateObject() {
 						continue
 					}
 
-					if _, err := os.Stat(serviceAppPath); err != nil { //客户端
-						objectPath = localKjPath + objectKey
-						utils.DownloadFile(objectUrl, objectPath)
+					if !isServiceRun {//客户端下载
+						localPath = localKjPath + objectKey
+						utils.DownloadFile(objectUrl, localPath)
 					}
 
-					err = bucket.PutObjectFromFile(objectKey, objectPath)
+					err = bucket.PutObjectFromFile(objectKey, localPath)
 					if err != nil {
 						handleError(err)
 					}else {
-						results<- "worker " + strconv.Itoa(id) + ": " + objectPath + " => "+objectKey + " 上传成功"
+						results<- "worker " + strconv.Itoa(id) + ": " + localPath + " => "+objectKey + " 上传成功"
 					}
 				}
 			}(w)
