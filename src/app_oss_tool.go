@@ -123,13 +123,16 @@ func migrateObject() {
 						objectUrl = "http://www.bstcine.com/f/" + mediaUrl
 						localPath = serviceFilePath + mediaUrl
 					} else {
-						objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
-						objectUrl = urlPrefix + mediaUrl + urlSuffix
-						localPath = serviceKjFilePath + objectKey
-
-						if strings.Contains(urlPrefix,"/mp3/") {
+						if strings.Contains(urlPrefix,"http://gcdn.bstcine.com/img") {
+							objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+							objectKey = strings.Replace(objectKey,"/f/","/",-1)
+							objectKey = objectKey[0:strings.Index(objectKey,".")] + ".jpg"
+						}else {
 							objectKey = "kj/" + mediaUrl
 						}
+
+						objectUrl = urlPrefix + mediaUrl + urlSuffix
+						localPath = serviceKjFilePath + objectKey
 					}
 
 					isExist, err := bucket.IsObjectExist(objectKey)
