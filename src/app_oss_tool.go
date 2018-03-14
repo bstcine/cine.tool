@@ -36,17 +36,17 @@ func main() {
 		localKjPath = "/Test/wwwroot/"
 		cfgName = "app_oss_tmp.cfg"
 	} else {
-		curPath = utils.GetCurPath() + string(os.PathSeparator)
-		outPutPath = utils.GetCurPath() + string(os.PathSeparator)
-		localKjPath = utils.GetCurPath() + string(os.PathSeparator) + "wwwroot" + string(os.PathSeparator)
+		curPath = utils.GetCurPath()
+		outPutPath = utils.GetCurPath()
+		localKjPath = utils.GetCurPath() + "wwwroot" + string(os.PathSeparator)
 	}
 
-	logFile,err  := os.Create(outPutPath+logName)
+	logFile, err := os.Create(outPutPath + logName)
 	defer logFile.Close()
 	if err != nil {
 		log.Fatalln("open file error !")
 	}
-	debugLog = log.New(logFile,"[Info]",log.Llongfile)
+	debugLog = log.New(logFile, "[Info]", log.Llongfile)
 
 	argsMap = utils.GetConfArgs(curPath + cfgName)
 	if argsMap == nil || len(argsMap) <= 0 {
@@ -75,6 +75,7 @@ func migrateObject() {
 	isCourseOrig := argsMap["migrateCourseType"] == "orig"
 
 	_, rows := utils.GetFiles(argsMap["srcPassword"], argsMap["migrateType"], argsMap["migrateCourse"])
+	rowCount := len(rows)
 
 	if argsMap["migrateModel"] == "list" { //获取资源清单
 		var listFiles []string
@@ -99,76 +100,90 @@ func migrateObject() {
 		}
 
 		//是否在服务器运行
-		_,err = os.Stat(serviceFilePath)
+		_, err = os.Stat(serviceFilePath)
 		isServiceRun := err == nil
 
-		jobs := make(chan string, len(rows))
-		results := make(chan string, len(rows))
+		jobs := make(chan []string, rowCount)
+		results := make(chan string, rowCount)
 
-		for w := 1; w <= 6; w++ {
+		for w := 1; w <= 10; w++ {
 			go func(id int) {
-				for row:= range jobs {
-					urls := strings.Split(row, ";")
+				for ossObject := range jobs {
+					objectKey := ossObject[0]
+					objectUrl := ossObject[1]
+					localPath := ossObject[2]
+					objectNo := ossObject[3]
 
-					mediaUrl := urls[0]
-					urlPrefix := urls[1]
-					urlSuffix := urls[2]
-
-					var objectKey string
-					var objectUrl string
-					var localPath string
-
-					if isCourseOrig {
-						objectKey = "kj/" + mediaUrl
-						objectUrl = "http://www.bstcine.com/f/" + mediaUrl
-						localPath = serviceFilePath + mediaUrl
-					} else {
-						if strings.Contains(urlPrefix,"http://gcdn.bstcine.com/img") {
-							objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
-							objectKey = strings.Replace(objectKey,"/f/","/",-1)
-							objectKey = objectKey[0:strings.Index(objectKey,".")] + ".jpg"
-						}else {
-							objectKey = "kj/" + mediaUrl
-						}
-
-						objectUrl = urlPrefix + mediaUrl + urlSuffix
-						localPath = serviceKjFilePath + objectKey
-					}
+					msg := "worker-" + strconv.Itoa(id) + "-" + objectNo + "/" + strconv.Itoa(rowCount) + ": "
 
 					isExist, err := bucket.IsObjectExist(objectKey)
 					if err != nil {
-						handleError(err)
-					}
-
-					if isExist {
-						results<- "worker " + strconv.Itoa(id) + ": " + objectKey + " 已经存在"
+						results <- msg + objectKey + " 检查失败 => " + err.Error()
 						continue
 					}
 
-					if !isServiceRun {//客户端下载
-						localPath = localKjPath + objectKey
-						utils.DownloadFile(objectUrl, localPath)
+					if isExist {
+						results <- msg + objectKey + " 已经存在"
+						continue
 					}
 
-					err = bucket.PutObjectFromFile(objectKey, localPath)
+					if isServiceRun { //ESC
+						err = bucket.PutObjectFromFile(objectKey, localPath)
+					} else { //本地
+						/*localPath = localKjPath + objectKey
+						utils.DownloadFile(objectUrl, localPath)
+						err = bucket.PutObjectFromFile(objectKey, localPath)*/
+						body, err := utils.GetHttpFileBytes(objectUrl)
+						if err == nil {
+							err = bucket.PutObject(objectKey, body)
+						}
+					}
+
 					if err != nil {
-						handleError(err)
-					}else {
-						results<- "worker " + strconv.Itoa(id) + ": " + localPath + " => "+objectKey + " 上传成功"
+						results <- msg + localPath + " => " + objectKey + " 上传失败 => " + err.Error()
+					} else {
+						results <- msg + localPath + " => " + objectKey + " 上传成功"
 					}
 				}
 			}(w)
 		}
 
-		for i := 0; i < len(rows); i++ {
-			jobs <- rows[i].(string)
+		for i := 0; i < rowCount; i++ {
+			urls := strings.Split(rows[i].(string), ";")
+
+			mediaUrl := urls[0]
+			urlPrefix := urls[1]
+			urlSuffix := urls[2]
+
+			var objectKey string
+			var objectUrl string
+			var localPath string
+
+			if isCourseOrig {
+				objectKey = "kj/" + mediaUrl
+				objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+				localPath = serviceFilePath + mediaUrl
+			} else {
+				if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
+					objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+					objectKey = strings.Replace(objectKey, "/f/", "/", -1)
+					objectKey = objectKey[0:strings.Index(objectKey, ".")] + ".jpg"
+				} else {
+					objectKey = "kj/" + mediaUrl
+				}
+
+				objectUrl = urlPrefix + mediaUrl + urlSuffix
+				localPath = serviceKjFilePath + objectKey
+			}
+
+			jobs <- []string{objectKey, objectUrl, localPath, strconv.Itoa(i + 1)}
 		}
 		close(jobs)
 
 		for a := 1; a <= len(rows); a++ {
 			msg := <-results
-			fmt.Printf("%d/%d: %s \n",a,len(rows),msg)
-			debugLog.Printf("%d/%d: %s",a,len(rows),msg)
+			fmt.Printf("%s \n",msg)
+			debugLog.Printf("%s",msg)
 		}
 	}
 
@@ -222,8 +237,8 @@ func setOssObjectACL() {
 		if err != nil {
 			handleError(err)
 		} else {
-			log.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
-			debugLog.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
+			log.Printf("%s set acl: %s", objectKey, argsMap["aclType"])
+			debugLog.Printf("%s set acl: %s", objectKey, argsMap["aclType"])
 		}
 
 	}
