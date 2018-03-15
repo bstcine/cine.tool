@@ -83,7 +83,8 @@ func checkCourse(courseId string){
 			checkStatus := checkLesson(lesson,courseId)
 
 			if checkStatus {
-				fmt.Println("剩余",len(rows)-i,"组",len(lessons)-j, "个")
+
+				fmt.Print("课件",courseId,"还剩余",len(rows)-i,"组",len(lessons)-j-1, "个lesson\n")
 			}else {
 				fmt.Println("资源检查失败，",courseId,"——",lesson.Id)
 			}
@@ -91,7 +92,7 @@ func checkCourse(courseId string){
 		}
 	}
 
-	fmt.Println("课程检查完毕")
+	fmt.Println(courseId,"课程检查完毕")
 
 }
 /**
