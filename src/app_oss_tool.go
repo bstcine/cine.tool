@@ -28,7 +28,7 @@ func handleError(err error) {
 }
 
 func main() {
-	var debug = true
+	var debug = false
 
 	if debug {
 		curPath = "/Go/Cine/cine.tool/assets/"
@@ -187,8 +187,8 @@ func migrateObject() {
 
 		for a := 1; a <= len(rows); a++ {
 			msg := <-results
-			fmt.Printf("%s \n",msg)
-			debugLog.Printf("%s",msg)
+			fmt.Printf("%s \n", msg)
+			debugLog.Printf("%s", msg)
 		}
 	}
 
@@ -199,7 +199,7 @@ func migrateObject() {
 /**
 校验ECS资源文件是否成功迁移到OSS
  */
-func checkFilesByECSToOSS()  {
+func checkFilesByECSToOSS() {
 	if argsMap["migrateType"] != "0" {
 		fmt.Println("暂时只支持获取课件资源")
 		return
@@ -234,16 +234,23 @@ func checkFilesByECSToOSS()  {
 
 				msg := "worker-" + strconv.Itoa(id) + "-" + objectNo + "/" + strconv.Itoa(rowCount) + ": "
 
-				isExist, err := bucket.IsObjectExist(objectKey)
+				header, err := bucket.GetObjectDetailedMeta(objectKey)
 				if err != nil {
 					results <- msg + objectKey + " 检查失败 => " + err.Error()
 					continue
 				}
 
-				if isExist {
-					results <- msg + objectKey + " 已经存在"
-				}else {
-					results <- msg + objectKey + " 不存在"
+				length := header.Get("Content-Length")
+
+				if i, err := strconv.Atoi(length); i > 162 && err == nil {
+					results <- msg + objectKey + " 已经存在 - " + length
+					//debugLog.Printf("%s %s %s", msg, objectKey, " 已经存在 -"+length)
+				} else {
+					if objectKey != "kj/" && len(objectKey) > 5 {
+						bucket.DeleteObject(objectKey)
+					}
+					results <- msg + objectKey + " 不存在 - " + length + " " + ossObject[1]
+					debugLog.Printf("%s %s %s", msg, objectKey, " 不存在 -"+length+" "+ossObject[1])
 				}
 			}
 		}(w)
@@ -283,8 +290,7 @@ func checkFilesByECSToOSS()  {
 
 	for a := 1; a <= len(rows); a++ {
 		msg := <-results
-		fmt.Printf("%s \n",msg)
-		debugLog.Printf("%s",msg)
+		fmt.Printf("%s \n", msg)
 	}
 
 	fmt.Println("请输入任意键结束...")
