@@ -204,7 +204,7 @@ func DownloadFile(url string, outPath string) {
 
 	defer headResp.Body.Close()
 
-	//size, err := strconv.Atoi(headResp.Header.Get("Content-Length"))
+	//size, err := strconv.Atoi(headResp.Header.CommonGet("Content-Length"))
 
 	if err != nil {
 		panic(err)
