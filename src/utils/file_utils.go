@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"bufio"
+	"bytes"
 )
 
 /**
@@ -48,6 +49,42 @@ func GetOutPath(dir string) string {
 	index := strings.LastIndex(path, string(os.PathSeparator))
 	ret := path[:index] + string(os.PathSeparator) + dir + string(os.PathSeparator)
 	return ret
+}
+
+/**
+获取网络文件流
+ */
+func GetHttpFileBytes(url string) (*bytes.Buffer,error) {
+
+	file := path.Base(url)
+
+	start := time.Now()
+
+	headResp, err := http.Head(url)
+	if err != nil {
+		return nil,err
+	}
+
+	defer headResp.Body.Close()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil,err
+	}
+
+	defer resp.Body.Close()
+
+	buf := new(bytes.Buffer)
+	len,err := buf.ReadFrom(resp.Body)
+
+	if err != nil {
+		return nil,err
+	}
+
+	elapsed := time.Since(start)
+	log.Printf("get file bytes(%d) %s from %s - completed in %s \n",len, file, url,elapsed)
+
+	return buf,nil
 }
 
 // readLines reads a whole file into memory
