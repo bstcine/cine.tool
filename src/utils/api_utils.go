@@ -86,3 +86,28 @@ func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chap
 
 	return res, rows
 }
+
+
+func UpdateLessonCheckStatus(request model.Request) (res model.ResCheckList, status bool) {
+
+	url := "http://apptest.bstcine.com/api/tool/content/lesson/checkStatus"
+
+	jsonBytes,_ := json.Marshal(request)
+
+	resp,err := http.Post(url,"application/json", bytes.NewBuffer(jsonBytes))
+
+	if err != nil {
+		println("更新请求出错：",err)
+	}
+	defer resp.Body.Close()
+
+	body,err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Println("解析出错：",err)
+	}
+
+	json.Unmarshal(body, &res)
+
+	return res, res.Result["status"]
+}

@@ -214,7 +214,6 @@ func setOssObjectACL() {
 			log.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
 			debugLog.Printf("%s set acl: %s",objectKey,argsMap["aclType"])
 		}
-
 	}
 }
 
