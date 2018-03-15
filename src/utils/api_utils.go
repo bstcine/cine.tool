@@ -68,7 +68,7 @@ func Signin(request model.Request) (res model.Res, token string) {
 }
 
 func GetFiles(password, fileType, cid string) (res map[string]interface{}, data []interface{}) {
-	url := conf.APIURL_Tool_Files + password + "&type=" + fileType + "&cid=" + cid
+	url := conf.APIURL_Tool_Files + "?password=" + password + "&type=" + fileType + "&cid=" + cid
 
 	CommonGet(url, &res)
 

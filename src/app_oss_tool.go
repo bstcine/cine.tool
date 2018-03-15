@@ -54,10 +54,15 @@ func main() {
 		return
 	}
 
-	if argsMap["srcType"] == "migrate" {
+	switch argsMap["srcType"] {
+	case "migrate":
 		migrateObject()
-	} else if argsMap["srcType"] == "acl" {
+	case "acl":
 		setOssObjectACL()
+	case "migrateCheck":
+		checkFilesByECSToOSS()
+	default:
+		fmt.Println("无效参数")
 	}
 
 }
@@ -185,6 +190,101 @@ func migrateObject() {
 			fmt.Printf("%s \n",msg)
 			debugLog.Printf("%s",msg)
 		}
+	}
+
+	fmt.Println("请输入任意键结束...")
+	fmt.Scanln()
+}
+
+/**
+校验ECS资源文件是否成功迁移到OSS
+ */
+func checkFilesByECSToOSS()  {
+	if argsMap["migrateType"] != "0" {
+		fmt.Println("暂时只支持获取课件资源")
+		return
+	}
+
+	//迁移课程资源的类型 是否为原始资源
+	isCourseOrig := argsMap["migrateCourseType"] == "orig"
+
+	_, rows := utils.GetFiles(argsMap["srcPassword"], argsMap["migrateType"], argsMap["migrateCourse"])
+	rowCount := len(rows)
+
+	client, err := oss.New(argsMap["Endpoint"], argsMap["AccessKeyId"], argsMap["AccessKeySecret"])
+	if err != nil {
+		handleError(err)
+		return
+	}
+
+	bucket, err := client.Bucket(argsMap["Bucket"])
+	if err != nil {
+		handleError(err)
+		return
+	}
+
+	jobs := make(chan []string, rowCount)
+	results := make(chan string, rowCount)
+
+	for w := 1; w <= 10; w++ {
+		go func(id int) {
+			for ossObject := range jobs {
+				objectKey := ossObject[0]
+				objectNo := ossObject[3]
+
+				msg := "worker-" + strconv.Itoa(id) + "-" + objectNo + "/" + strconv.Itoa(rowCount) + ": "
+
+				isExist, err := bucket.IsObjectExist(objectKey)
+				if err != nil {
+					results <- msg + objectKey + " 检查失败 => " + err.Error()
+					continue
+				}
+
+				if isExist {
+					results <- msg + objectKey + " 已经存在"
+				}else {
+					results <- msg + objectKey + " 不存在"
+				}
+			}
+		}(w)
+	}
+
+	for i := 0; i < rowCount; i++ {
+		urls := strings.Split(rows[i].(string), ";")
+
+		mediaUrl := urls[0]
+		urlPrefix := urls[1]
+		urlSuffix := urls[2]
+
+		var objectKey string
+		var objectUrl string
+		var localPath string
+
+		if isCourseOrig {
+			objectKey = "kj/" + mediaUrl
+			objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+			localPath = serviceFilePath + mediaUrl
+		} else {
+			if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
+				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+				objectKey = strings.Replace(objectKey, "/f/", "/", -1)
+				objectKey = objectKey[0:strings.Index(objectKey, ".")] + ".jpg"
+			} else {
+				objectKey = "kj/" + mediaUrl
+			}
+
+			objectUrl = urlPrefix + mediaUrl + urlSuffix
+			localPath = serviceKjFilePath + objectKey
+		}
+
+		jobs <- []string{objectKey, objectUrl, localPath, strconv.Itoa(i + 1)}
+	}
+	close(jobs)
+
+	for a := 1; a <= len(rows); a++ {
+		msg := <-results
+		fmt.Printf("%s \n",msg)
+		debugLog.Printf("%s",msg)
 	}
 
 	fmt.Println("请输入任意键结束...")

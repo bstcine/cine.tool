@@ -1,7 +1,7 @@
 package conf
 
 //是否开发模式
-const IsDebug = false
+const IsDebug = true
 
 //API 配置
 const API_BASE_URL = "http://www.bstcine.com"
