@@ -224,34 +224,21 @@ func checkFilesByECSToOSS() {
 	}
 
 	jobs := make(chan []string, rowCount)
-	results := make(chan string, rowCount)
+	results := make(chan []string, rowCount)
 
 	for w := 1; w <= 10; w++ {
 		go func(id int) {
 			for ossObject := range jobs {
 				objectKey := ossObject[0]
-				objectNo := ossObject[3]
-
-				msg := "worker-" + strconv.Itoa(id) + "-" + objectNo + "/" + strconv.Itoa(rowCount) + ": "
 
 				header, err := bucket.GetObjectDetailedMeta(objectKey)
 				if err != nil {
-					results <- msg + objectKey + " 检查失败 => " + err.Error()
+					results <- append(ossObject, "0", err.Error())
 					continue
 				}
 
 				length := header.Get("Content-Length")
-
-				if i, err := strconv.Atoi(length); i > 162 && err == nil {
-					results <- msg + objectKey + " 已经存在 - " + length
-					//debugLog.Printf("%s %s %s", msg, objectKey, " 已经存在 -"+length)
-				} else {
-					if objectKey != "kj/" && len(objectKey) > 5 {
-						bucket.DeleteObject(objectKey)
-					}
-					results <- msg + objectKey + " 不存在 - " + length + " " + ossObject[1]
-					debugLog.Printf("%s %s %s", msg, objectKey, " 不存在 -"+length+" "+ossObject[1])
-				}
+				results <- append(ossObject, length)
 			}
 		}(w)
 	}
@@ -265,12 +252,10 @@ func checkFilesByECSToOSS() {
 
 		var objectKey string
 		var objectUrl string
-		var localPath string
 
 		if isCourseOrig {
 			objectKey = "kj/" + mediaUrl
 			objectUrl = "http://www.bstcine.com/f/" + mediaUrl
-			localPath = serviceFilePath + mediaUrl
 		} else {
 			if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
 				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
@@ -281,16 +266,26 @@ func checkFilesByECSToOSS() {
 			}
 
 			objectUrl = urlPrefix + mediaUrl + urlSuffix
-			localPath = serviceKjFilePath + objectKey
 		}
 
-		jobs <- []string{objectKey, objectUrl, localPath, strconv.Itoa(i + 1)}
+		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1)}
 	}
 	close(jobs)
 
-	for a := 1; a <= len(rows); a++ {
+	for a := 1; a <= rowCount; a++ {
 		msg := <-results
-		fmt.Printf("%s \n", msg)
+		objectKey := msg[0]
+		objectUrl := msg[1]
+		length := msg[3]
+
+		if i, err := strconv.Atoi(length); i <= 162 || err != nil {
+			if objectKey != "kj/" && len(objectKey) > 5 {
+				bucket.DeleteObject(objectKey)
+			}
+			debugLog.Printf("objectUrl:%s 上传失败",objectUrl)
+		}
+
+		fmt.Printf("%s/%d %s \n",msg[2],rowCount,msg)
 	}
 
 	fmt.Println("请输入任意键结束...")
