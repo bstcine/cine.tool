@@ -1,4 +1,24 @@
 # cine.tool
+- ### 工具打包
+   - Window(exe)
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ go get github.com/nfnt/resize
+      $ go github.com/aliyun/aliyun-oss-go-sdk/oss
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/cine_tools.exe src/cine_tools.go
+      ```
+   - Mac
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ go get github.com/nfnt/resize
+      $ go github.com/aliyun/aliyun-oss-go-sdk/oss
+      $ go build -o bin/cine_tools src/cine_tools.go
+      $ ./bin/cine_tools
+      ```
+
+
 - ### 文件压缩工具-Build
    - Window(exe)
       ```
