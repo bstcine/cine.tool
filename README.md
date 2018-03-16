@@ -1,5 +1,5 @@
 # cine.tool
-- ### 工具打包
+- ### cine_tools - Build
    - Window(exe)
       ```
       $ git clone https://github.com/bstcine/cine.tool.git
@@ -17,7 +17,6 @@
       $ go build -o bin/cine_tools src/cine_tools.go
       $ ./bin/cine_tools
       ```
-
 
 - ### 文件压缩工具-Build
    - Window(exe)
@@ -70,20 +69,4 @@
       $ git clone https://github.com/bstcine/cine.tool.git
       $ cd cine.tool
       $ go build -o bin/app_download_course src/app_download_course.go
-      ```
-- ### 阿里云 Oss 工具-Build
-   - Window(exe)
-      ```
-      $ git clone https://github.com/bstcine/cine.tool.git
-      $ cd cine.tool
-      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/app_oss_tool.exe src/app_oss_tool.go
-      ```
-   - Mac
-      ```
-      $ git clone https://github.com/bstcine/cine.tool.git
-      $ cd cine.tool
-      $ go get github.com/nfnt/resize
-      
-      $ go build -o bin/app_oss_tool src/app_oss_tool.go
-      $ ./bin/app_oss_tool
       ```
