@@ -271,6 +271,7 @@ func (tools Tools) MigrateCheck() {
 		mediaUrl := urls[0]
 		urlPrefix := urls[1]
 		urlSuffix := urls[2]
+		lessonId := urls[3]
 
 		var objectKey string
 		var objectUrl string
@@ -290,7 +291,7 @@ func (tools Tools) MigrateCheck() {
 			objectUrl = urlPrefix + mediaUrl + urlSuffix
 		}
 
-		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1)}
+		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1), lessonId}
 	}
 	close(jobs)
 
@@ -298,14 +299,15 @@ func (tools Tools) MigrateCheck() {
 		msg := <-results
 		objectKey := msg[0]
 		objectUrl := msg[1]
-		length := msg[3]
+		lessonId := msg[3]
+		length := msg[4]
 
 		if i, err := strconv.Atoi(length); i <= 162 || err != nil {
 			if objectKey != "kj/" && len(objectKey) > 5 {
 				bucket.DeleteObject(objectKey)
 			}
 
-			tools.GetLogger().Printf("%s", objectUrl+" 上传失败")
+			tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" 上传失败")
 		}
 
 		fmt.Printf("%s/%d %s \n", msg[2], rowCount, msg)
