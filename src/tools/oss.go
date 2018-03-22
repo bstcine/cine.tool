@@ -8,6 +8,16 @@ import (
 	"os"
 	"../utils"
 	"log"
+	"io/ioutil"
+	"net/http"
+	"encoding/base64"
+	"crypto/hmac"
+	"hash"
+	"crypto/sha1"
+	"io"
+	"sort"
+	"bytes"
+	"time"
 )
 
 var serviceFilePath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
@@ -312,4 +322,198 @@ func (tools Tools) MigrateCheck() {
 
 		fmt.Printf("%s/%d %s \n", msg[2], rowCount, msg)
 	}
+}
+
+/**
+资源(kj)中非 jpg 图片转 jpg
+ */
+func (tools Tools) FormatOSSKj() {
+	confMap := tools.ConfMap
+	if confMap["migrateType"] != "0" {
+		fmt.Println("暂时只支持获取课件资源")
+		return
+	}
+
+	_, rows := utils.GetFiles(confMap["srcPassword"], confMap["migrateType"], confMap["migrateCourse"])
+	rowCount := len(rows)
+
+	jobs := make(chan []string, rowCount)
+	results := make(chan []string, rowCount)
+
+	for w := 1; w <= 25; w++ {
+		go func(id int) {
+			for ossObject := range jobs {
+				objectKey := ossObject[0]
+
+				suf := objectKey[strings.LastIndex(objectKey, "."):len(objectKey)]
+
+				if suf != ".mp3" && suf != ".mp4" && suf != ".jpg" {
+					msg := tools.imgSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg")
+					results <- append(ossObject, "格式化成功:"+msg)
+				} else {
+					results <- append(ossObject, "无需格式化")
+				}
+
+			}
+		}(w)
+	}
+
+	for i := 0; i < rowCount; i++ {
+		urls := strings.Split(rows[i].(string), ";")
+
+		mediaUrl := urls[0]
+		lessonId := urls[3]
+
+		var objectKey string
+		var objectUrl string
+
+		objectKey = "kj/" + mediaUrl
+		objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+
+		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1), lessonId}
+	}
+	close(jobs)
+
+	for a := 1; a <= rowCount; a++ {
+		msg := <-results
+		objectUrl := msg[1]
+		lessonId := msg[3]
+		length := msg[4]
+
+		if i, err := strconv.Atoi(length); i <= 162 || err != nil {
+			tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" 上传失败")
+		}
+
+		fmt.Printf("%s/%d %s \n", msg[2], rowCount, msg)
+	}
+}
+
+/**
+OSS 图片处理
+ */
+func (tools Tools) imgSave(objKey, newObjKey string) string {
+	var bucket = "static-bstcine"
+	var region = "oss-cn-shanghai"
+	var ossHost = "http://" + bucket + "." + region + ".aliyuncs.com/"
+
+	newObjKey = base64.StdEncoding.EncodeToString([]byte(newObjKey))
+	bucket = base64.StdEncoding.EncodeToString([]byte(bucket))
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", ossHost+objKey+"?x-oss-process", strings.NewReader("x-oss-process=image/format,jpg|sys/saveas,o_"+newObjKey+",b_"+bucket))
+	if err != nil {
+		// handle error
+	}
+
+	ossDate := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	req.Header.Set(HTTPHeaderDate, ossDate)
+
+	tools.signHeader(req, "/static-bstcine/"+objKey+"?x-oss-process")
+
+	resp, err := client.Do(req)
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+	}
+
+	return string(body)
+}
+
+const (
+	HTTPHeaderAuthorization      = "Authorization"
+	HTTPHeaderCacheControl       = "Cache-Control"
+	HTTPHeaderContentDisposition = "Content-Disposition"
+	HTTPHeaderContentEncoding    = "Content-Encoding"
+	HTTPHeaderContentLength      = "Content-Length"
+	HTTPHeaderContentMD5         = "Content-MD5"
+	HTTPHeaderContentType        = "Content-Type"
+	HTTPHeaderContentLanguage    = "Content-Language"
+	HTTPHeaderDate               = "Date"
+)
+
+func (tools Tools) signHeader(req *http.Request, canonicalizedResource string) {
+	// Get the final Authorization' string
+	authorizationStr := "OSS "+tools.ConfMap["AccessKeyId"]+":" + tools.getSignedStr(req, canonicalizedResource)
+
+	// Give the parameter "Authorization" value
+	req.Header.Set(HTTPHeaderAuthorization, authorizationStr)
+}
+
+func (tools Tools) getSignedStr(req *http.Request, canonicalizedResource string) string {
+	// Find out the "x-oss-"'s address in this request'header
+	temp := make(map[string]string)
+
+	for k, v := range req.Header {
+		if strings.HasPrefix(strings.ToLower(k), "x-oss-") {
+			temp[strings.ToLower(k)] = v[0]
+		}
+	}
+	hs := newHeaderSorter(temp)
+
+	// Sort the temp by the Ascending Order
+	hs.Sort()
+
+	// Get the CanonicalizedOSSHeaders
+	canonicalizedOSSHeaders := ""
+	for i := range hs.Keys {
+		canonicalizedOSSHeaders += hs.Keys[i] + ":" + hs.Vals[i] + "\n"
+	}
+
+	// Give other parameters values
+	// when sign url, date is expires
+	date := req.Header.Get(HTTPHeaderDate)
+	contentType := req.Header.Get(HTTPHeaderContentType)
+	contentMd5 := req.Header.Get(HTTPHeaderContentMD5)
+
+	signStr := req.Method + "\n" + contentMd5 + "\n" + contentType + "\n" + date + "\n" + canonicalizedOSSHeaders + canonicalizedResource
+	h := hmac.New(func() hash.Hash { return sha1.New() }, []byte("XOssD3DnWffLiJaSgWjFdV0kHzJeIC"))
+	io.WriteString(h, signStr)
+	signedStr := base64.StdEncoding.EncodeToString(h.Sum(nil))
+
+	return signedStr
+}
+
+// 用于signHeader的字典排序存放容器。
+type headerSorter struct {
+	Keys []string
+	Vals []string
+}
+
+// Additional function for function SignHeader.
+func (hs *headerSorter) Sort() {
+	sort.Sort(hs)
+}
+
+// Additional function for function SignHeader.
+func (hs *headerSorter) Len() int {
+	return len(hs.Vals)
+}
+
+// Additional function for function SignHeader.
+func (hs *headerSorter) Less(i, j int) bool {
+	return bytes.Compare([]byte(hs.Keys[i]), []byte(hs.Keys[j])) < 0
+}
+
+// Additional function for function SignHeader.
+func (hs *headerSorter) Swap(i, j int) {
+	hs.Vals[i], hs.Vals[j] = hs.Vals[j], hs.Vals[i]
+	hs.Keys[i], hs.Keys[j] = hs.Keys[j], hs.Keys[i]
+}
+
+func newHeaderSorter(m map[string]string) *headerSorter {
+	hs := &headerSorter{
+		Keys: make([]string, 0, len(m)),
+		Vals: make([]string, 0, len(m)),
+	}
+
+	for k, v := range m {
+		hs.Keys = append(hs.Keys, k)
+		hs.Vals = append(hs.Vals, v)
+	}
+	return hs
 }

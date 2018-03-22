@@ -35,6 +35,8 @@ func main() {
 		tool.SetObjectACL()
 	case "oss_migrate_check": //资源迁移校验
 		tool.MigrateCheck()
+	case "oss_img_format":
+		tool.FormatOSSKj()
 	default:
 		fmt.Println("无效参数")
 	}
