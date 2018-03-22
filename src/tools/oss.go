@@ -378,13 +378,9 @@ func (tools Tools) FormatOSSKj() {
 		msg := <-results
 		objectUrl := msg[1]
 		lessonId := msg[3]
-		length := msg[4]
 
-		if i, err := strconv.Atoi(length); i <= 162 || err != nil {
-			tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" 上传失败")
-		}
-
-		fmt.Printf("%s/%d %s \n", msg[2], rowCount, msg)
+		tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" - "+msg[4])
+		fmt.Printf("lessonId-%s :%s", lessonId, objectUrl+" - "+msg[4])
 	}
 }
 
@@ -438,7 +434,7 @@ const (
 
 func (tools Tools) signHeader(req *http.Request, canonicalizedResource string) {
 	// Get the final Authorization' string
-	authorizationStr := "OSS "+tools.ConfMap["AccessKeyId"]+":" + tools.getSignedStr(req, canonicalizedResource)
+	authorizationStr := "OSS " + tools.ConfMap["AccessKeyId"] + ":" + tools.getSignedStr(req, canonicalizedResource)
 
 	// Give the parameter "Authorization" value
 	req.Header.Set(HTTPHeaderAuthorization, authorizationStr)
