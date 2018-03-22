@@ -327,14 +327,10 @@ func (tools Tools) MigrateCheck() {
 /**
 资源(kj)中非 jpg 图片转 jpg
  */
-func (tools Tools) FormatOSSKj() {
+func (tools Tools) ImgFormatJPG() {
 	confMap := tools.ConfMap
-	if confMap["migrateType"] != "0" {
-		fmt.Println("暂时只支持获取课件资源")
-		return
-	}
 
-	_, rows := utils.GetFiles(confMap["srcPassword"], confMap["migrateType"], confMap["migrateCourse"])
+	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["imgCourse"])
 	rowCount := len(rows)
 
 	jobs := make(chan []string, rowCount)
@@ -348,7 +344,7 @@ func (tools Tools) FormatOSSKj() {
 				suf := objectKey[strings.LastIndex(objectKey, "."):len(objectKey)]
 
 				if suf != ".mp3" && suf != ".mp4" && suf != ".jpg" {
-					msg := tools.imgSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg")
+					msg := tools.imgProcessSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg", "image/format,jpg")
 					results <- append(ossObject, "格式化成功:"+msg)
 				} else {
 					results <- append(ossObject, "无需格式化")
@@ -368,9 +364,59 @@ func (tools Tools) FormatOSSKj() {
 		var objectUrl string
 
 		objectKey = "kj/" + mediaUrl
-		objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+		objectUrl = "http://oss.bstcine.com/" + objectKey
 
-		jobs <- []string{strconv.Itoa(i + 1)+ "/" + strconv.Itoa(rowCount),lessonId,objectKey, objectUrl}
+		jobs <- []string{strconv.Itoa(i+1) + "/" + strconv.Itoa(rowCount), lessonId, objectKey, objectUrl}
+	}
+	close(jobs)
+
+	for a := 1; a <= rowCount; a++ {
+		msg := <-results
+		tools.GetLogger().Println(msg)
+		fmt.Println(msg)
+	}
+}
+
+/**
+课件资源图片加水印
+ */
+func (tools Tools) ImgWaterMark() {
+	confMap := tools.ConfMap
+
+	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["imgCourse"])
+	rowCount := len(rows)
+
+	jobs := make(chan []string, rowCount)
+	results := make(chan []string, rowCount)
+
+	for w := 1; w <= 25; w++ {
+		go func(id int) {
+			for ossObject := range jobs {
+				courseId := ossObject[1]
+				mediaUrl := ossObject[3]
+
+				name := mediaUrl[0:strings.LastIndex(mediaUrl, ".")]
+				suf := mediaUrl[strings.LastIndex(mediaUrl, "."):len(mediaUrl)]
+
+				if suf == ".jpg" {
+					msg := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+name+".jpg", "style/"+confMap["imgStyle"])
+					results <- append(ossObject, "图片加水印-"+msg)
+				} else {
+					results <- append(ossObject, "无需加水印")
+				}
+
+			}
+		}(w)
+	}
+
+	for i := 0; i < rowCount; i++ {
+		urls := strings.Split(rows[i].(string), ";")
+
+		courseId := urls[4]
+		lessonId := urls[3]
+		mediaUrl := urls[0]
+
+		jobs <- []string{strconv.Itoa(i+1) + "/" + strconv.Itoa(rowCount), courseId, lessonId, mediaUrl}
 	}
 	close(jobs)
 
@@ -384,7 +430,7 @@ func (tools Tools) FormatOSSKj() {
 /**
 OSS 图片处理
  */
-func (tools Tools) imgSave(objKey, newObjKey string) string {
+func (tools Tools) imgProcessSave(objKey, newObjKey, process string) string {
 	var bucket = "static-bstcine"
 	var region = "oss-cn-shanghai"
 	var ossHost = "http://" + bucket + "." + region + ".aliyuncs.com/"
@@ -394,7 +440,7 @@ func (tools Tools) imgSave(objKey, newObjKey string) string {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", ossHost+objKey+"?x-oss-process", strings.NewReader("x-oss-process=image/format,jpg|sys/saveas,o_"+newObjKey+",b_"+bucket))
+	req, err := http.NewRequest("POST", ossHost+objKey+"?x-oss-process", strings.NewReader("x-oss-process="+process+"|sys/saveas,o_"+newObjKey+",b_"+bucket))
 	if err != nil {
 		// handle error
 	}

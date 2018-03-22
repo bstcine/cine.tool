@@ -36,7 +36,9 @@ func main() {
 	case "oss_migrate_check": //资源迁移校验
 		tool.MigrateCheck()
 	case "oss_img_format":
-		tool.FormatOSSKj()
+		tool.ImgFormatJPG()
+	case "oss_img_watermark":
+		tool.ImgWaterMark()
 	default:
 		fmt.Println("无效参数")
 	}
