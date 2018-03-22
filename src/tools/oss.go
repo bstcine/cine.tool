@@ -343,7 +343,7 @@ func (tools Tools) FormatOSSKj() {
 	for w := 1; w <= 25; w++ {
 		go func(id int) {
 			for ossObject := range jobs {
-				objectKey := ossObject[0]
+				objectKey := ossObject[2]
 
 				suf := objectKey[strings.LastIndex(objectKey, "."):len(objectKey)]
 
@@ -370,17 +370,14 @@ func (tools Tools) FormatOSSKj() {
 		objectKey = "kj/" + mediaUrl
 		objectUrl = "http://www.bstcine.com/f/" + mediaUrl
 
-		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1), lessonId}
+		jobs <- []string{strconv.Itoa(i + 1)+ "/" + strconv.Itoa(rowCount),lessonId,objectKey, objectUrl}
 	}
 	close(jobs)
 
 	for a := 1; a <= rowCount; a++ {
 		msg := <-results
-		objectUrl := msg[1]
-		lessonId := msg[3]
-
-		tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" - "+msg[4])
-		fmt.Printf("lessonId-%s :%s", lessonId, objectUrl+" - "+msg[4])
+		tools.GetLogger().Println(msg)
+		fmt.Println(msg)
 	}
 }
 
