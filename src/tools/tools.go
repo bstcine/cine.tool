@@ -6,12 +6,15 @@ import (
 	"log"
 	"strings"
 	"../conf"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
 type Tools struct {
 	WorkPath string
 	ConfDir  string
 	ConfMap  map[string]string
+	OSSClient *oss.Client
+	OSSBucket *oss.Bucket
 }
 
 var logger *log.Logger

@@ -399,7 +399,7 @@ func (tools Tools) ImgWaterMark() {
 				suf := mediaUrl[strings.LastIndex(mediaUrl, "."):len(mediaUrl)]
 
 				if suf == ".jpg" {
-					msg := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+name+".jpg", "style/"+confMap["imgStyle"])
+					msg := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+"/"+name+".jpg", "style/"+confMap["imgStyle"])
 					results <- append(ossObject, "图片加水印-"+msg)
 				} else {
 					results <- append(ossObject, "无需加水印")
@@ -427,6 +427,45 @@ func (tools Tools) ImgWaterMark() {
 	}
 }
 
+func (tools Tools) getClient() (*oss.Client, error) {
+	if tools.OSSClient != nil {
+		return tools.OSSClient, nil
+	}
+
+	confMap := tools.ConfMap
+
+	client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
+	if err != nil {
+		tools.HandleError(err)
+	}
+
+	tools.OSSClient = client
+
+	return client, err
+}
+
+func (tools Tools) getBucket() (*oss.Bucket, error) {
+	if tools.OSSBucket != nil {
+		return tools.OSSBucket, nil
+	}
+
+	confMap := tools.ConfMap
+
+	client, err := tools.getClient()
+	if err != nil {
+		tools.HandleError(err)
+	}
+
+	bucket, err := client.Bucket(confMap["Bucket"])
+	if err != nil {
+		tools.HandleError(err)
+	}
+
+	tools.OSSBucket = bucket
+
+	return bucket, err
+}
+
 /**
 OSS 图片处理
  */
@@ -440,7 +479,9 @@ func (tools Tools) imgProcessSave(objKey, newObjKey, process string) string {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", ossHost+objKey+"?x-oss-process", strings.NewReader("x-oss-process="+process+"|sys/saveas,o_"+newObjKey+",b_"+bucket))
+	url := ossHost + objKey + "?x-oss-process"
+	data := "x-oss-process=" + process + "|sys/saveas,o_" + newObjKey + ",b_" + bucket
+	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
 		// handle error
 	}
