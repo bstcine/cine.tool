@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"strings"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"strconv"
 )
 
 /**
@@ -65,64 +66,21 @@ func main() {
 
 	// 创建配置文件
 	isConfigExist := makeConfigFile(configPath)
+
 	if !isConfigExist {
 		fmt.Println("配置文件不存在，程序结束")
 		return
 	}
-	// 读取配置文件
-	configMap,err := utils.ReadLines(configPath)
 
-	if err != nil {
+	courseIds,lessonIds := readConfig(configPath)
 
-		fmt.Println(err)
+	// 判断配置lesson数组和course数组是否对应
+	if lessonIds != nil && len(courseIds) > 0 && len(courseIds) != len(lessonIds) {
 
-		return
-	}
-
-	var courseIds []string
-	var lessonIds []string
-
-	var configObject = make(map[string] string)
-
-	for _,configLine := range configMap {
-
-		var lineValues = strings.Split(configLine,"=")
-
-		if len(lineValues) > 1 {
-
-			configObject[lineValues[0]] = lineValues[1]
-
-		}else {
-
-			configObject[lineValues[0]] = ""
-
-		}
-
-	}
-
-	oss_download_bucket = configObject["Bucket"]
-	oss_download_endPoint = configObject["Endpoint"]
-	oss_download_accessKeyId = configObject["AccessKeyId"]
-	oss_download_accessKeySecret = configObject["AccessKeySecret"]
-	oss_download_account = configObject["account"]
-	oss_download_password = configObject["password"]
-
-	courseIdString:=configObject["courseIds"]
-	lessonIdString:=configObject["lessonIds"]
-
-	courseIds = strings.Split(courseIdString,",")
-	lessonIds = strings.Split(lessonIdString,",")
-
-	fmt.Println(configObject)
-
-	if len(courseIds) <= 0 {
-
-		fmt.Println("没有配置courseId")
+		fmt.Println("配置course 和lesson 数量不对应，如有部分课程全部下载，请配置\"[]\"")
 
 		return
 	}
-
-	fmt.Println("配置信息读取成功",courseIds,lessonIds)
 
 	// 开始登入服务器获取权限
 	token := getToken()
@@ -133,12 +91,26 @@ func main() {
 
 	// 已正确获取服务器权限，开始访问列表
 
-	for _,courseId := range courseIds{
+	for i := 0; i < len(courseIds);i++  {
 
-		downloadCourse(resourcePath, token, courseId, lessonIds)
+		courseId := courseIds[i]
+		var downloadLessonIds []string
+
+		if lessonIds != nil {
+			downloadLessonIds = lessonIds[0]
+		}
+
+		downloadCourse(resourcePath,token,courseId,downloadLessonIds)
 
 	}
+
 }
+
+//*****************************************************************
+//*****************************************************************
+//************************** oss下载模块 ***************************
+//*****************************************************************
+//*****************************************************************
 
 /// 下载一个课程
 /**
@@ -167,6 +139,16 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 
 	var coursePath = resourcePath + "/" + courseId
 
+	downloadRows(coursePath, courseId, rows)
+}
+
+/// 下载课程列表
+/**
+ * @param coursePath 课程目录，存放chapter资源
+ * @param rows 待下载的chapter资源列表
+ */
+func downloadRows(coursePath string, courseId string, rows []model.Chapter) {
+
 	for _,chapter := range rows {
 
 		var chapterPath = coursePath + "/" + chapter.Name
@@ -175,89 +157,182 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 
 			var lessonPath = chapterPath + "/" + lesson.Name
 
-			for _,media := range lesson.Medias {
+			downloadLesson(lessonPath,courseId,lesson)
 
-				var mediaPaths []string
+		}
+	}
 
-				if strings.Contains(media.Url,"/f/") {
+}
 
-					mediaPaths = strings.Split(media.Url,"/f/")
+/// 下载课程
+/**
+ * @param lessonPath 课程目录，存放lesson资源
+ * @param courseId lesson所属的课件id
+ * @param lesson 待下载的课件
+ */
+func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 
-				}else if strings.Contains(media.Url,"/kj/") {
+	makeSandbox(lessonPath)
 
-					mediaPaths = strings.Split(media.Url,"/kj/")
+	for i := 0; i < len(lesson.Medias); i++ {
 
+		media := lesson.Medias[i]
+
+		var mediaPaths []string
+
+		if strings.Contains(media.Url,"/f/") {
+
+			mediaPaths = strings.Split(media.Url,"/f/")
+
+		}else if strings.Contains(media.Url,"/kj/") {
+
+			mediaPaths = strings.Split(media.Url,"/kj/")
+
+		}else {
+
+			continue
+		}
+
+		mediaPath := mediaPaths[len(mediaPaths) - 1]
+
+		localMedia := lessonPath + "/" + changeInt(i)
+
+		// 下载media
+		_ = downloadOssResource(localMedia,courseId,mediaPath,false)
+
+		// 下载照片
+
+		for j := 0 ; j < len(media.Images) ; j++ {
+
+			image := media.Images[j]
+
+			var imageUrl = image.Url
+
+			var imagePaths []string
+			var isImage bool
+			var pre string
+
+			if strings.Contains(imageUrl,"/f/") {
+
+				imagePaths = strings.Split(imageUrl,"/f/")
+
+				if strings.Contains(imageUrl,"www.bstcine.com") {
+					isImage = false
 				}else {
-
-					continue
+					isImage = true
 				}
 
-				mediaPath := mediaPaths[len(mediaPaths) - 1]
+			}else if strings.Contains(imageUrl,"/kj/") {
 
-				mediaComponts := strings.Split(mediaPath,"/")
+				imagePaths = strings.Split(imageUrl,"/kj/")
+				isImage = false
 
-				mediaName := mediaComponts[len(mediaComponts)-1]
+			}else if strings.Contains(imageUrl,"img/") {
 
-				mediaComponts = strings.Split(mediaName,".")
+				imagePaths = strings.Split(image.Url,"img/")
+				isImage = true
+				pre = "img/"
 
-				mediaName = mediaComponts[0]
+			}else {
 
-				localMedia := lessonPath + "/" + mediaName
+				continue
 
-				makeSandbox(localMedia)
+			}
 
-				// 下载media
-				_ = downloadOssResource(localMedia,courseId,mediaPath,false)
+			imageParh := pre + imagePaths[len(imagePaths)-1]
 
-				// 下载照片
+			localImage := localMedia + "_" + changeInt(j)
 
-				for _,image := range media.Images {
+			_ = downloadOssResource(localImage,courseId,imageParh,isImage)
 
-					var imageUrl = image.Url
+		}
 
-					var imagePaths []string
-					var isImage bool
-					var pre string
+	}
 
-					if strings.Contains(imageUrl,"/f/") {
+}
 
-						imagePaths = strings.Split(imageUrl,"/f/")
+/// 下载oss上的资源
+/**
+ * 从oss下载资源
+ * @param courseId 待下载资源对应的课件id
+ * @param path 资源相对url路径（"/f/"之后的路径）
+ * @param isImage 是否是存储在图片库的资源（用来判断是否统一修改扩展名为".jpg"）
+ * @return 资源下载结果
+ */
+func downloadOssResource(savePath string, courseId string, path string, isImage bool) bool {
 
-						if strings.Contains(imageUrl,"www.bstcine.com") {
-							isImage = false
-						}else {
-							isImage = true
-						}
+	client,err := oss.New(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret)
 
-					}else if strings.Contains(imageUrl,"/kj/") {
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("创建客户端对象失败")
+		return false
+	}
 
-						imagePaths = strings.Split(imageUrl,"/kj/")
-						isImage = false
+	bucket,err := client.Bucket(oss_download_bucket)
 
-					}else if strings.Contains(imageUrl,"img/") {
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("创建bucket失败")
+		return false
+	}
 
-						imagePaths = strings.Split(image.Url,"img/")
-						isImage = true
-						pre = "img/"
+	if strings.Contains(path,"?") {
+		pathComponts := strings.Split(path,"?")
+		path = pathComponts[0]
+	}
 
-					}else {
+	var objectKey string
 
-						continue
+	if strings.Contains(path,"img/") || strings.Contains(path,"kj/") {
 
-					}
+		objectKey = path
 
-					imageParh := pre + imagePaths[len(imagePaths)-1]
+	}else {
 
-					_ = downloadOssResource(localMedia,courseId,imageParh,isImage)
+		if isImage {
+			paths := strings.Split(path,".")
+			objectKey = "img/" + courseId + "/" + paths[0] + ".jpg"
+		}else {
+			objectKey = "kj/" + path
+		}
 
-				}
+	}
 
+	fileName := strings.Split(objectKey,".")
+
+	savePath = savePath + "." + fileName[len(fileName)-1]
+
+	for i := 0; i < 3;i++  {
+
+		err = bucket.DownloadFile(objectKey,savePath,100*1024,oss.Routines(3),oss.Checkpoint(true,""))
+
+		if err == nil {
+
+			fmt.Println("下载成功", objectKey)
+			return true
+
+		}else {
+
+			if i == 2 {
+
+				fmt.Println(err)
 			}
 
 		}
 	}
+
+	// 将获取失败的文件写入日志中
+	fmt.Println("获取资源失败",objectKey)
+
+	return false
 }
 
+//*****************************************************************
+//*****************************************************************
+//************************ 获取服务器权限 ***************************
+//*****************************************************************
+//*****************************************************************
 /// 登入服务器，获取token
 /**
  * @param
@@ -326,30 +401,103 @@ func getToken() string {
 	return ""
 }
 
-/// 读取标准用户输入流
-/**
- * @param endbyte 字符串结束符 char类型 如 '\n', '\t',' '等
- * @return string 除掉结束字符的输入字符串
- * @return error 标准输入流报错
- */
-func clientInput(endbyte byte) (string, error) {
+//*****************************************************************
+//*****************************************************************
+//************************* 管理配置信息 ****************************
+//*****************************************************************
+//*****************************************************************
 
-	clientReader := bufio.NewReader(os.Stdin)
+/// 读取配置文件
+func readConfig(configPath string) ([]string, [][]string) {
 
-	input,err := clientReader.ReadString(endbyte)
+	// 读取配置文件
+	configMap,err := utils.ReadLines(configPath)
 
-	endData := []byte{endbyte,}
-	input = strings.Replace(input,string(endData[:]),"",-1)
+	if err != nil {
 
-	return input,err
+		fmt.Println(err)
+
+		return nil, nil
+	}
+
+	var courseIds []string
+	var lessonIds [][]string
+
+	var configObject = make(map[string] string)
+
+	for _,configLine := range configMap {
+
+		var lineValues = strings.Split(configLine,"=")
+
+		if len(lineValues) > 1 {
+
+			configObject[lineValues[0]] = lineValues[1]
+
+		}else {
+
+			configObject[lineValues[0]] = ""
+
+		}
+
+	}
+
+	oss_download_bucket = configObject["Bucket"]
+	oss_download_endPoint = configObject["Endpoint"]
+	oss_download_accessKeyId = configObject["AccessKeyId"]
+	oss_download_accessKeySecret = configObject["AccessKeySecret"]
+	oss_download_account = configObject["account"]
+	oss_download_password = configObject["password"]
+
+	courseIdString:=configObject["courseIds"]
+	lessonIdString:=configObject["lessonIds"]
+
+	courseIds = strings.Split(courseIdString,",")
+
+	if len(courseIds) <= 0 {
+
+		fmt.Println("没有配置courseId")
+
+		return nil, nil
+	}
+
+	if lessonIdString == "" {
+		return courseIds,nil
+	}
+
+	var lessonArrs []string
+
+	lessonArrs = strings.Split(lessonIdString,",")
+
+	for _,lessonArr := range lessonArrs {
+
+		lessonArr = strings.Replace(lessonArr,"[","",-1)
+		lessonArr = strings.Replace(lessonArr,"]","",-1)
+
+		var lessonArray []string
+
+		if lessonArr == "" {
+			lessonArray = make([]string,0)
+		}else {
+			lessonArray = strings.Split(lessonArr,",")
+		}
+
+		lessonIds = append(lessonIds,lessonArray)
+	}
+
+	fmt.Println(configObject)
+
+	fmt.Println("配置信息读取成功",courseIds,lessonIds)
+
+	return courseIds, lessonIds
 }
 
-/// 处理配置文件
+/// 创建配置文件
 /**
  * @param path 配置文件路径
  * @return bool 配置文件是否存在
  */
 func makeConfigFile(path string) bool {
+
 	_,err := os.Stat(path)
 
 	if err == nil {
@@ -359,7 +507,6 @@ func makeConfigFile(path string) bool {
 	fileHandle, err := os.Create(path)
 
 	if err != nil {
-
 		return false
 	}
 
@@ -373,73 +520,107 @@ func makeConfigFile(path string) bool {
 
 		fileWriter := bufio.NewWriter(fileHandle)
 
-		fileWriter.WriteString("courseIds:\nlessonIds:")
+		fileWriter.WriteString("courseIds=\nlessonIds=\nBucket=\nEndpoint=\nAccessKeyId=\nAccessKeySecret=\naccount=\npassword=")
 
 		err = fileWriter.Flush()
 
-		fmt.Println("您选择暂不配置下载文件，您可以稍候自行在 oss_download_config.txt文件中输入相关信息，程序已结束。")
+		fmt.Println("您选择暂不配置下载文，配置模板已自动生成,您可以稍候自行在 oss_download_config.txt文件中输入相关信息，程序已结束。")
 
 		return false
 	}
-
 	// 准备courseIds,lessonIds
 
-	var selectString string
+	var courseIds string
+	var lessonIds string
 
 	var i int = 0
 
 	for {
 
-		i++
+		fmt.Println("请输入待下载课程 id(courseId),以 enter 键结束,不能包含\",\"等特殊字符：")
 
-		fmt.Println("请选择下载方式：1 -> course, 2 -> lesson，以 enter 键结束")
-		selectString,err = clientInput('\n')
+		cid,err := clientInput('\n')
 
 		if err != nil {
 			fmt.Println("标准输入流出错，程序结束")
 			return  false
 		}
 
-		if selectString == "1" {
-
-			fmt.Print("请输入所有需要执行下载的courseId，以英文下的\",\"分隔，以 enter 键结束：")
-
-			break
-
-		}else if selectString == "2" {
-
-			fmt.Print("请输入所有需要执行下载的lessonId，以英文下的\",\"分隔，以 enter 键结束：")
-
-			break
-
-		}else {
-
-			if i == 5 {
-				fmt.Println("您已经连续五次选择下载类型错误，程序结束")
-				return false
-			}
-			fmt.Println("类型选择错误，请重新选择")
-
+		if strings.Contains(cid,",") {
+			fmt.Println("输入错误，不能包含\",\"字符, 请重新输入")
+			continue
 		}
 
+		if courseIds == "" {
+			courseIds = cid
+		}else {
+			courseIds = courseIds + "," + cid
+		}
+
+		fmt.Println("请为课程指定需要下载的lesson，每个lesson用\",\"隔开，以 enter 键结束，如果需要下载全部lesson，请直接点击 enter 键")
+
+		lid,err := clientInput('\n')
+
+		if err != nil {
+			fmt.Println("标准输入流出错，程序结束")
+			return  false
+		}
+
+		lid = "[" + lid + "]"
+
+		if lessonIds == "" {
+			lessonIds = lid
+		}else {
+			lessonIds = lessonIds + "," + lid
+		}
+
+		i++
+
+		fmt.Printf("您已经成功配置了%d个课程，是否继续添加待下载课程 y/n ",i)
+
+		addStatus,err := clientInput('\n')
+
+		if err != nil {
+			fmt.Println("标准输入流出错，程序结束")
+			return  false
+		}
+
+		if addStatus == "Y" || addStatus == "y" || addStatus == "YES" || addStatus == "yes" || addStatus == "Yes" {
+			continue
+		}
+
+		break
 	}
 
-	ids,err := clientInput('\n')
+	fmt.Println("开始配置oss参数：")
 
+	fmt.Print("请输入Bucket: ")
+
+	bucket,err := clientInput('\n')
+	if err != nil {
+		fmt.Println("标准输入流出错，程序结束")
+		return  false
+	}
+	fmt.Print("请输入Endpoint: ")
+	endpoint,err := clientInput('\n')
+	if err != nil {
+		fmt.Println("标准输入流出错，程序结束")
+		return  false
+	}
+	fmt.Print("请输入AccessKeyId: ")
+	accessKeyId,err := clientInput('\n')
+	if err != nil {
+		fmt.Println("标准输入流出错，程序结束")
+		return  false
+	}
+	fmt.Println("请输入AccessKeySecret: ")
+	accessKeySecret,err := clientInput('\n')
 	if err != nil {
 		fmt.Println("标准输入流出错，程序结束")
 		return  false
 	}
 
-	if selectString == "1" {
-
-		ids = "courseIds:"+ids+"\nlessonIds:"
-
-	}else {
-
-		ids = "courseIds:"+"\nlessonIds:"+ids
-
-	}
+	ids := "courseIds="+courseIds+"\nlessonIds="+lessonIds+"\nBucket="+bucket+"\nEndpoint="+endpoint+"\nAccessKeyId="+accessKeyId+"\nAccessKeySecret="+accessKeySecret
 
 	fileWriter := bufio.NewWriter(fileHandle)
 
@@ -454,10 +635,32 @@ func makeConfigFile(path string) bool {
 		return  false
 	}
 
+	fmt.Println("配置文件创建成功")
+
 	return true
 }
 
-/// 创建资源保存文件夹路径
+//*****************************************************************
+//*****************************************************************
+//************************* 系统功能封装 ****************************
+//*****************************************************************
+//*****************************************************************
+
+/// 将100以内的int数据转换为string（显示两位）
+func changeInt(value int) string {
+
+	s := strconv.Itoa(value)
+
+	if value < 10 {
+
+		s = "0"+s
+
+	}
+
+	return  s
+}
+
+/// 创建目录
 /**
  * @param path 资源文件路径
  * @return 是否创建完成
@@ -478,81 +681,20 @@ func makeSandbox(path string) bool {
 	return false
 }
 
-
-/// 下载oss上的资源
+/// 读取标准用户输入流(提示用户输入信息)
 /**
- * 从oss下载资源
- * @param courseId 待下载资源对应的课件id
- * @param path 资源相对url路径（"/f/"之后的路径）
- * @param isImage 是否是存储在图片库的资源（用来判断是否统一修改扩展名为".jpg"）
- * @return 资源下载结果
+ * @param endbyte 字符串结束符 char类型 如 '\n', '\t',' '等
+ * @return string 除掉结束字符的输入字符串
+ * @return error 标准输入流报错
  */
-func downloadOssResource(saveDirect string, courseId string, path string, isImage bool) bool {
+func clientInput(endbyte byte) (string, error) {
 
-	client,err := oss.New(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret)
+	clientReader := bufio.NewReader(os.Stdin)
 
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("创建客户端对象失败")
-		return false
-	}
+	input,err := clientReader.ReadString(endbyte)
 
-	bucket,err := client.Bucket(oss_download_bucket)
+	endData := []byte{endbyte,}
+	input = strings.Replace(input,string(endData[:]),"",-1)
 
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("创建bucket失败")
-		return false
-	}
-
-	if strings.Contains(path,"?") {
-		pathComponts := strings.Split(path,"?")
-		path = pathComponts[0]
-	}
-
-	var objectKey string
-
-	if strings.Contains(path,"img/") || strings.Contains(path,"kj/") {
-
-		objectKey = path
-
-	}else {
-
-		if isImage {
-			paths := strings.Split(path,".")
-			objectKey = "img/" + courseId + "/" + paths[0] + ".jpg"
-		}else {
-			objectKey = "kj/" + path
-		}
-
-	}
-
-	fileName := strings.Split(objectKey,"/")
-
-	var savePath = saveDirect + "/" + fileName[len(fileName)-1]
-
-	for i := 0; i < 3;i++  {
-
-		err = bucket.DownloadFile(objectKey,savePath,100*1024,oss.Routines(3),oss.Checkpoint(true,""))
-
-		if err == nil {
-
-			fmt.Println("下载成功", objectKey)
-			return true
-
-		}else {
-
-			if i == 2 {
-
-				fmt.Println(err)
-			}
-
-		}
-	}
-
-	// 将获取失败的文件写入日志中
-	fmt.Println("获取资源失败",objectKey)
-
-	return false
+	return input,err
 }
-
