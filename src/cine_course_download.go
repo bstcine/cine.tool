@@ -82,6 +82,13 @@ func main() {
 		return
 	}
 
+	// 检查是否存在错误日志表
+	errorStatus := candownloadErrorLog()
+
+	if errorStatus {
+		return
+	}
+
 	// 开始登入服务器获取权限
 	token := getToken()
 
@@ -302,9 +309,248 @@ func downloadOssResource(savePath string, courseId string, path string, isImage 
 	if !downloadStatus {
 		// 将错误信息写入报错日志
 		fmt.Println("下载失败：",savePath,objectKey)
+		addErrorObject(objectKey,savePath)
 	}
 
 	return downloadStatus
+}
+
+
+
+//*****************************************************************
+//*****************************************************************
+//*********************** 管理下载错误对象 **************************
+//*****************************************************************
+//*****************************************************************
+/// 下载错误日志中的对象
+func candownloadErrorLog() bool {
+
+	var errorPath string
+
+	if oss_download_debug {
+
+		errorPath = oss_download_errorLog_debug
+
+	}else  {
+
+		errorPath = oss_download_errorLog
+
+	}
+
+	_,err := os.Stat(errorPath)
+
+	if err != nil {
+		return  false
+	}
+
+	// 读取文件中的数据
+	errorObjects,err := utils.ReadLines(errorPath)
+
+	if err != nil {
+		// 读取失败的处理
+		fmt.Println("读取错误日志失败")
+		return false
+	}
+
+	if len(errorObjects) == 0 {
+
+		// 删除错误日志文件
+		os.Remove(errorPath)
+
+		return  false
+	}
+
+	for _,errorObject := range errorObjects {
+
+		if !strings.Contains(errorObject,",") {
+			continue
+		}
+
+		objectComponent := strings.Split(errorObject,",")
+
+		downloadErrorObject(objectComponent[1],objectComponent[0])
+	}
+
+	if oss_download_downloadStatus {
+		// 删除错误日志文件
+		os.Remove(errorPath)
+	}
+
+	return  true
+
+}
+// 下载错误对象
+/**
+ * @param savePath 保存路径
+ * @param objectKey 下载对象
+ */
+func downloadErrorObject(savePath string,objectKey string) bool {
+
+	fmt.Println(objectKey)
+
+	downloadStatus := utils.DownloadOssResource(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey)
+
+	if downloadStatus {
+
+		// 下载完成，移出错误日志
+		fmt.Println("下载完成",objectKey)
+		removeErrorObject(objectKey)
+
+	}else {
+
+		oss_download_downloadStatus = false
+
+	}
+
+	return downloadStatus
+}
+
+/// 将下载失败的对象保存到错误日志中
+/**
+ @param objectKey 下载失败的对象
+ @param savePath 保存地址
+ */
+func addErrorObject(objectKey string, savePath string) {
+
+	var errorPath string
+
+	if oss_download_debug {
+
+		errorPath = oss_download_errorLog_debug
+
+	}else  {
+
+		errorPath = oss_download_errorLog
+
+	}
+
+	// 判断文件是否存在
+	_,err := os.Stat(errorPath)
+
+	if err != nil {
+		// 创建一个错误日志文件
+		_,err = os.Create(errorPath)
+		if err == nil {
+			fmt.Println("错误日志创建成功")
+		}
+	}
+
+	// 读取文件中的数据
+	errorObjects,err := utils.ReadLines(errorPath)
+
+	if err != nil {
+		// 读取失败的处理
+		fmt.Println("读取错误日志失败")
+		return
+	}
+
+	var errorStrings string
+
+	if len(errorObjects) == 0 {
+
+		errorStrings = objectKey+","+savePath
+
+	}else {
+
+		for _,errorObject := range errorObjects {
+
+			if !strings.Contains(errorObject,",") {
+				continue
+			}
+
+			if strings.Contains(errorObject,objectKey) {
+				return
+			}
+
+			// 正常数据
+			if errorStrings == "" {
+				errorStrings = errorObject
+			}else {
+				errorStrings = errorStrings + "\n" + errorObject
+			}
+		}
+
+		errorStrings = errorStrings+"\n"+objectKey+","+savePath
+	}
+
+	fileHandler,err := os.Create(errorPath)
+	// 存储错误信息
+	writer := bufio.NewWriter(fileHandler)
+
+	writer.WriteString(errorStrings)
+
+	err = writer.Flush()
+
+}
+
+func removeErrorObject(objectKey string){
+
+	var errorPath string
+
+	if oss_download_debug {
+
+		errorPath = oss_download_errorLog_debug
+
+	}else  {
+
+		errorPath = oss_download_errorLog
+
+	}
+
+	// 判断文件是否存在
+	_,err := os.Stat(errorPath)
+
+	if err != nil {
+
+		return
+	}
+
+	// 读取文件中的数据
+	errorObjects,err := utils.ReadLines(errorPath)
+
+	if err != nil {
+		// 读取失败的处理
+		fmt.Println("读取错误日志失败")
+		return
+	}
+
+	if len(errorObjects) == 0 {
+		return
+	}
+
+	var errorStrings string
+
+	for _,errorObject := range errorObjects {
+
+		if !strings.Contains(errorObject,",") {
+			continue
+		}
+
+		if strings.Contains(errorObject,objectKey) {
+
+			objectComponent := strings.Split(errorObject,",")
+
+			if objectComponent[0] == objectKey {
+				continue
+			}
+
+		}
+
+		if errorStrings == "" {
+			errorStrings = errorObject
+		}else {
+			errorStrings = errorStrings + "\n" + errorObject
+		}
+	}
+
+	fileHandler,err := os.Create(errorPath)
+	// 存储错误信息
+	writer := bufio.NewWriter(fileHandler)
+
+	writer.WriteString(errorStrings)
+
+	err = writer.Flush()
+
 }
 
 //*****************************************************************
@@ -321,9 +567,12 @@ func getToken() string {
 
 	for i := 1; i <= 5; i++ {
 
+		var isConfigAccount bool = true
+
 		if oss_download_account == "" {
 
 			// 获取输入账户名
+			isConfigAccount = false
 
 			oss_download_account = utils.ClientInputWithMessage("请输入用户名：",'\n')
 
@@ -334,6 +583,8 @@ func getToken() string {
 		}
 
 		if oss_download_password == "" {
+
+			isConfigAccount = false
 
 			oss_download_password = utils.ClientInputWithMessage("请输入密码：",'\n')
 
@@ -364,6 +615,7 @@ func getToken() string {
 
 		} else {
 
+			fmt.Println(isConfigAccount)
 			return token
 		}
 
