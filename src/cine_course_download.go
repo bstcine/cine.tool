@@ -32,7 +32,7 @@ var oss_download_configFile_debug = "/Users/lidangkun/Desktop/oss_download/oss_d
 var oss_download_errorLog = "./oss_error.txt"
 var oss_download_errorLog_debug = "/Users/lidangkun/Desktop/oss_download/oss_error.txt"
 
-var oss_download_debug bool = true
+var oss_download_debug bool = false
 
 var oss_download_endPoint string
 var oss_download_accessKeyId string
