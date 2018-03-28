@@ -1,6 +1,7 @@
 package main
 
 import (
+	"./conf"
 	"./utils"
 	"./model"
 	"fmt"
@@ -21,15 +22,15 @@ import (
  */
 
 /// 配置下载资源路径
-var oss_download_resources string = "./oss_download"
+var oss_download_resources string = conf.Course_downloadWorkDir
 var oss_download_resources_debug string = "/Users/lidangkun/Desktop/oss_download"
 
 /// 配置配置文件路径
-var oss_download_configFile string = "./oss_download_config.txt"
+var oss_download_configFile string = conf.Course_download_Config
 var oss_download_configFile_debug = "/Users/lidangkun/Desktop/oss_download/oss_download_config.txt"
 
 /// 下载错误信息
-var oss_download_errorLog = "./oss_error.txt"
+var oss_download_errorLog = conf.Course_download_errorLog
 var oss_download_errorLog_debug = "/Users/lidangkun/Desktop/oss_download/oss_error.txt"
 
 var oss_download_debug bool = false

@@ -13,3 +13,8 @@ const API_BASE_URL = "http://www.bstcine.com"
 const API_BASE_URL_TEST = "http://apptest.bstcine.com"
 
 const Media_Host_KJ = "oss.bstcine.com"
+
+// oss 资源下载配置路径
+const Course_downloadWorkDir = "./oss_download"                            // 下载oss工作目录
+const Course_download_Config = "./oss_download/oss_download_config.txt"    // 下载oss配置文件
+const Course_download_errorLog = "./oss_download/oss_error.txt"            // 下载oss错误日志
