@@ -7,7 +7,66 @@ import (
 	"runtime"
 	"strings"
 	"os"
+	"strconv"
+	"bufio"
 )
+
+
+/// 将100以内的int数据转换为string（显示两位）
+func ChangeInt(value int) string {
+
+	s := strconv.Itoa(value)
+
+	if value < 10 {
+
+		s = "0"+s
+
+	}
+
+	return  s
+}
+
+
+/// 读取标准用户输入流（包含提示用户的内容）
+/**
+ *
+ */
+func ClientInputWithMessage(message string,endbyte byte) string {
+
+	// 提示用户需要输入信息
+	fmt.Println(message)
+
+	value,err := ClientInput(endbyte)
+
+	if err != nil {
+
+		// 告知用户标准输入流异常
+		fmt.Println("标准输入流异常，输入信息获取失败")
+
+		return  ""
+	}
+
+	return  value
+}
+
+/// 读取标准用户输入流(提示用户输入信息)
+/**
+ * @param endbyte 字符串结束符 char类型 如 '\n', '\t',' '等
+ * @return string 除掉结束字符的输入字符串
+ * @return error 标准输入流报错
+ */
+func ClientInput(endbyte byte) (string, error) {
+
+	clientReader := bufio.NewReader(os.Stdin)
+
+	input,err := clientReader.ReadString(endbyte)
+
+	endData := []byte{endbyte,}
+	input = strings.Replace(input,string(endData[:]),"",-1)
+
+	return input,err
+}
+
 
 /**
 获取配置文件参数

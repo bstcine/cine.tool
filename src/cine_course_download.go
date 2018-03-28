@@ -7,8 +7,6 @@ import (
 	"os"
 	"bufio"
 	"strings"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"strconv"
 )
 
 /**
@@ -43,6 +41,8 @@ var oss_download_bucket string
 var oss_download_account string
 var oss_download_password string
 
+var oss_download_downloadStatus bool = true
+
 func main() {
 
 	// 确定资源存放路径和配置文件路径
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// 创建资源存放目录
-	isResourceExist := makeSandbox(resourcePath)
+	isResourceExist := utils.CreatDirectory(resourcePath)
 
 	if !isResourceExist {
 		fmt.Println("资源存放文件夹创建失败，程序结束")
@@ -102,6 +102,12 @@ func main() {
 
 		downloadCourse(resourcePath,token,courseId,downloadLessonIds)
 
+	}
+
+	if oss_download_downloadStatus {
+		fmt.Println("本次课件资源全部下载完成")
+	}else{
+		fmt.Println("本次课件部分资源下载失败，请重新执行本程序，续传失败的文件")
 	}
 
 }
@@ -172,7 +178,7 @@ func downloadRows(coursePath string, courseId string, rows []model.Chapter) {
  */
 func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 
-	makeSandbox(lessonPath)
+	utils.CreatDirectory(lessonPath)
 
 	for i := 0; i < len(lesson.Medias); i++ {
 
@@ -195,7 +201,7 @@ func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 
 		mediaPath := mediaPaths[len(mediaPaths) - 1]
 
-		localMedia := lessonPath + "/" + changeInt(i)
+		localMedia := lessonPath + "/" + utils.ChangeInt(i)
 
 		// 下载media
 		_ = downloadOssResource(localMedia,courseId,mediaPath,false)
@@ -241,9 +247,13 @@ func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 
 			imageParh := pre + imagePaths[len(imagePaths)-1]
 
-			localImage := localMedia + "_" + changeInt(j)
+			localImage := localMedia + "_" + utils.ChangeInt(j)
 
-			_ = downloadOssResource(localImage,courseId,imageParh,isImage)
+			lessonStatus := downloadOssResource(localImage,courseId,imageParh,isImage)
+
+			if !lessonStatus {
+				oss_download_downloadStatus = false
+			}
 
 		}
 
@@ -260,22 +270,6 @@ func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
  * @return 资源下载结果
  */
 func downloadOssResource(savePath string, courseId string, path string, isImage bool) bool {
-
-	client,err := oss.New(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret)
-
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("创建客户端对象失败")
-		return false
-	}
-
-	bucket,err := client.Bucket(oss_download_bucket)
-
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("创建bucket失败")
-		return false
-	}
 
 	if strings.Contains(path,"?") {
 		pathComponts := strings.Split(path,"?")
@@ -303,29 +297,14 @@ func downloadOssResource(savePath string, courseId string, path string, isImage 
 
 	savePath = savePath + "." + fileName[len(fileName)-1]
 
-	for i := 0; i < 3;i++  {
+	downloadStatus := utils.DownloadOssResource(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey)
 
-		err = bucket.DownloadFile(objectKey,savePath,100*1024,oss.Routines(3),oss.Checkpoint(true,""))
-
-		if err == nil {
-
-			fmt.Println("下载成功", objectKey)
-			return true
-
-		}else {
-
-			if i == 2 {
-
-				fmt.Println(err)
-			}
-
-		}
+	if !downloadStatus {
+		// 将错误信息写入报错日志
+		fmt.Println("下载失败：",savePath,objectKey)
 	}
 
-	// 将获取失败的文件写入日志中
-	fmt.Println("获取资源失败",objectKey)
-
-	return false
+	return downloadStatus
 }
 
 //*****************************************************************
@@ -342,18 +321,13 @@ func getToken() string {
 
 	for i := 1; i <= 5; i++ {
 
-		var err error
-
 		if oss_download_account == "" {
 
 			// 获取输入账户名
-			fmt.Print("请输入用户名：")
 
-			oss_download_account, err = clientInput('\n')
+			oss_download_account = utils.ClientInputWithMessage("请输入用户名：",'\n')
 
-			if err != nil {
-
-				fmt.Println("标准输入流错误，程序结束")
+			if oss_download_account == "" {
 
 				return ""
 			}
@@ -361,12 +335,9 @@ func getToken() string {
 
 		if oss_download_password == "" {
 
-			fmt.Print("请输入密码：")
-			oss_download_password, err = clientInput('\n')
+			oss_download_password = utils.ClientInputWithMessage("请输入密码：",'\n')
 
-			if err != nil {
-
-				fmt.Println("标准输入流错误，程序结束")
+			if oss_download_password == "" {
 
 				return ""
 			}
@@ -512,9 +483,7 @@ func makeConfigFile(path string) bool {
 
 	defer  fileHandle.Close()
 
-	fmt.Println("下载配置文件不存在，是否立即配置？yes/no(以 enter 键结束)")
-
-	addConfig,err := clientInput('\n')
+	addConfig := utils.ClientInputWithMessage("下载配置文件不存在，是否立即配置？yes/no(以 enter 键结束)",'\n')
 
 	if addConfig != "yes" {
 
@@ -537,14 +506,7 @@ func makeConfigFile(path string) bool {
 
 	for {
 
-		fmt.Println("请输入待下载课程 id(courseId),以 enter 键结束,不能包含\",\"等特殊字符：")
-
-		cid,err := clientInput('\n')
-
-		if err != nil {
-			fmt.Println("标准输入流出错，程序结束")
-			return  false
-		}
+		cid := utils.ClientInputWithMessage("请输入待下载课程 id(courseId),以 enter 键结束,不能包含\",\"等特殊字符：",'\n')
 
 		if strings.Contains(cid,",") {
 			fmt.Println("输入错误，不能包含\",\"字符, 请重新输入")
@@ -557,14 +519,7 @@ func makeConfigFile(path string) bool {
 			courseIds = courseIds + "," + cid
 		}
 
-		fmt.Println("请为课程指定需要下载的lesson，每个lesson用\",\"隔开，以 enter 键结束，如果需要下载全部lesson，请直接点击 enter 键")
-
-		lid,err := clientInput('\n')
-
-		if err != nil {
-			fmt.Println("标准输入流出错，程序结束")
-			return  false
-		}
+		lid := utils.ClientInputWithMessage("请为课程指定需要下载的lesson，每个lesson用\",\"隔开，以 enter 键结束，如果需要下载全部lesson，请直接点击 enter 键",'\n')
 
 		lid = "[" + lid + "]"
 
@@ -578,7 +533,7 @@ func makeConfigFile(path string) bool {
 
 		fmt.Printf("您已经成功配置了%d个课程，是否继续添加待下载课程 y/n ",i)
 
-		addStatus,err := clientInput('\n')
+		addStatus,err := utils.ClientInput('\n')
 
 		if err != nil {
 			fmt.Println("标准输入流出错，程序结束")
@@ -594,31 +549,13 @@ func makeConfigFile(path string) bool {
 
 	fmt.Println("开始配置oss参数：")
 
-	fmt.Print("请输入Bucket: ")
+	bucket := utils.ClientInputWithMessage("请输入Bucket: ",'\n')
 
-	bucket,err := clientInput('\n')
-	if err != nil {
-		fmt.Println("标准输入流出错，程序结束")
-		return  false
-	}
-	fmt.Print("请输入Endpoint: ")
-	endpoint,err := clientInput('\n')
-	if err != nil {
-		fmt.Println("标准输入流出错，程序结束")
-		return  false
-	}
-	fmt.Print("请输入AccessKeyId: ")
-	accessKeyId,err := clientInput('\n')
-	if err != nil {
-		fmt.Println("标准输入流出错，程序结束")
-		return  false
-	}
-	fmt.Println("请输入AccessKeySecret: ")
-	accessKeySecret,err := clientInput('\n')
-	if err != nil {
-		fmt.Println("标准输入流出错，程序结束")
-		return  false
-	}
+	endpoint := utils.ClientInputWithMessage("请输入Endpoint: ",'\n')
+
+	accessKeyId := utils.ClientInputWithMessage("请输入AccessKeyId: ",'\n')
+
+	accessKeySecret := utils.ClientInputWithMessage("请输入AccessKeySecret: ",'\n')
 
 	ids := "courseIds="+courseIds+"\nlessonIds="+lessonIds+"\nBucket="+bucket+"\nEndpoint="+endpoint+"\nAccessKeyId="+accessKeyId+"\nAccessKeySecret="+accessKeySecret
 
@@ -638,63 +575,4 @@ func makeConfigFile(path string) bool {
 	fmt.Println("配置文件创建成功")
 
 	return true
-}
-
-//*****************************************************************
-//*****************************************************************
-//************************* 系统功能封装 ****************************
-//*****************************************************************
-//*****************************************************************
-
-/// 将100以内的int数据转换为string（显示两位）
-func changeInt(value int) string {
-
-	s := strconv.Itoa(value)
-
-	if value < 10 {
-
-		s = "0"+s
-
-	}
-
-	return  s
-}
-
-/// 创建目录
-/**
- * @param path 资源文件路径
- * @return 是否创建完成
- */
-func makeSandbox(path string) bool {
-
-	_,err := os.Stat(path);
-	if err == nil {
-		return true
-	}
-
-	err = os.MkdirAll(path,0711)
-
-	if err == nil {
-		return true
-	}
-
-	return false
-}
-
-/// 读取标准用户输入流(提示用户输入信息)
-/**
- * @param endbyte 字符串结束符 char类型 如 '\n', '\t',' '等
- * @return string 除掉结束字符的输入字符串
- * @return error 标准输入流报错
- */
-func clientInput(endbyte byte) (string, error) {
-
-	clientReader := bufio.NewReader(os.Stdin)
-
-	input,err := clientReader.ReadString(endbyte)
-
-	endData := []byte{endbyte,}
-	input = strings.Replace(input,string(endData[:]),"",-1)
-
-	return input,err
 }

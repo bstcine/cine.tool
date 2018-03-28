@@ -15,6 +15,22 @@ import (
 	"bytes"
 )
 
+/// 创建目录
+/**
+ * @param path 资源文件路径
+ * @return 是否创建完成
+ */
+func CreatDirectory(path string) bool {
+
+	err := os.MkdirAll(path,0711)
+
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
 /**
 文件是否存在
 */
