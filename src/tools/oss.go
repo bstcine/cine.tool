@@ -255,22 +255,23 @@ func (tools Tools) MigrateCheck() {
 		return
 	}
 
-	jobs := make(chan []string, rowCount)
-	results := make(chan []string, rowCount)
+	jobs := make(chan OssInfo, rowCount)
+	results := make(chan OssInfo, rowCount)
 
 	for w := 1; w <= 10; w++ {
 		go func(id int) {
 			for ossObject := range jobs {
-				objectKey := ossObject[0]
-
-				header, err := bucket.GetObjectDetailedMeta(objectKey)
+				header, err := bucket.GetObjectDetailedMeta(ossObject.ObjectKey)
 				if err != nil {
-					results <- append(ossObject, "0", err.Error())
+					ossObject.Error = err
+					results <- ossObject
 					continue
 				}
 
 				length := header.Get("Content-Length")
-				results <- append(ossObject, length)
+				ossObject.Length = length
+
+				results <- ossObject
 			}
 		}(w)
 	}
@@ -279,17 +280,19 @@ func (tools Tools) MigrateCheck() {
 		urls := strings.Split(rows[i].(string), ";")
 
 		mediaUrl := urls[0]
-		urlPrefix := urls[1]
-		urlSuffix := urls[2]
 		lessonId := urls[3]
+		courseId := urls[4]
 
 		var objectKey string
-		var objectUrl string
+		var migrateUrl string
 
 		if isCourseOrig {
 			objectKey = "kj/" + mediaUrl
-			objectUrl = "http://www.bstcine.com/f/" + mediaUrl
+			migrateUrl = "http://www.bstcine.com/f/" + mediaUrl
 		} else {
+			urlPrefix := urls[1]
+			urlSuffix := urls[2]
+
 			if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
 				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
 				objectKey = strings.Replace(objectKey, "/f/", "/", -1)
@@ -298,29 +301,22 @@ func (tools Tools) MigrateCheck() {
 				objectKey = "kj/" + mediaUrl
 			}
 
-			objectUrl = urlPrefix + mediaUrl + urlSuffix
+			migrateUrl = urlPrefix + mediaUrl + urlSuffix
 		}
 
-		jobs <- []string{objectKey, objectUrl, strconv.Itoa(i + 1), lessonId}
+		jobs <- OssInfo{ObjectKey:objectKey,MigrateUrl:migrateUrl,CourseId:courseId,LessonId:lessonId,Remark:strconv.Itoa(i + 1)}
 	}
 	close(jobs)
 
 	for a := 1; a <= rowCount; a++ {
 		msg := <-results
-		objectKey := msg[0]
-		objectUrl := msg[1]
-		lessonId := msg[3]
-		length := msg[4]
+		length := msg.Length
 
-		if i, err := strconv.Atoi(length); i <= 162 || err != nil {
-			if objectKey != "kj/" && len(objectKey) > 5 {
-				bucket.DeleteObject(objectKey)
-			}
-
-			tools.GetLogger().Printf("lessonId-%s :%s", lessonId, objectUrl+" 上传失败")
+		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
+			tools.GetLogger().Printf("OSS：%s ; ECS：%s ; CourseId: %s ; LessonId: %s ; SIZE: %sB ; ERROR: %+v \n", msg.ObjectKey, msg.MigrateUrl, msg.CourseId, msg.LessonId, msg.Length, msg.Error)
 		}
 
-		fmt.Printf("%s/%d %s \n", msg[2], rowCount, msg)
+		fmt.Printf("%s/%d %s \n", msg.Remark, rowCount, msg)
 	}
 }
 
@@ -425,6 +421,26 @@ func (tools Tools) ImgWaterMark() {
 		tools.GetLogger().Println(msg)
 		fmt.Println(msg)
 	}
+}
+
+
+/**
+######################################################
+###################  阿里提供的 OSS API  ##############
+######################################################
+ */
+
+/**
+资源信息类
+*/
+type OssInfo struct {
+	ObjectKey string //对象key
+	MigrateUrl string //迁移路径
+	Length string //长度
+	CourseId string //Course Id
+	LessonId string //Lesson Id
+	Error error //error
+	Remark string // 备注
 }
 
 func (tools Tools) getClient() (*oss.Client, error) {
