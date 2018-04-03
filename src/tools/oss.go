@@ -313,7 +313,7 @@ func (tools Tools) MigrateCheck() {
 		length := msg.Length
 
 		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
-			tools.GetLogger().Printf("OSS：%s ; ECS：%s ; CourseId: %s ; LessonId: %s ; SIZE: %sB ; ERROR: %+v \n", msg.ObjectKey, msg.MigrateUrl, msg.CourseId, msg.LessonId, msg.Length, msg.Error)
+			tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n",  msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl,msg.Length, msg.Error)
 		}
 
 		fmt.Printf("%s/%d %s \n", msg.Remark, rowCount, msg)
