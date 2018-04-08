@@ -85,9 +85,9 @@ func (tools Tools) MigrateObject() {
 			return
 		}
 
-		//是否在服务器运行
 		_, err = os.Stat(serviceFilePath)
-		isServiceRun := err == nil
+		isServiceRun := err == nil                    //是否在服务器运行
+		isReplace := confMap["migrateReplace"] == "1" //是否覆盖上传
 
 		jobs := make(chan OssInfo, rowCount)
 		results := make(chan OssInfo, rowCount)
@@ -106,12 +106,11 @@ func (tools Tools) MigrateObject() {
 						continue
 					}
 
+					//文件是否存在
 					if isExist {
-						//是否覆盖上传
-						if confMap["migrateReplace"] == "1" {
-							//删除
-							bucket.DeleteObject(objectKey)
-						}else {
+						if isReplace {
+							bucket.DeleteObject(objectKey) //删除文件
+						} else {
 							ossObject.Error = errors.New("已经存在")
 							results <- ossObject
 							continue
