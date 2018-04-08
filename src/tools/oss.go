@@ -175,10 +175,18 @@ func (tools Tools) MigrateObject() {
 		}
 		close(jobs)
 
+		migrateSuccessLogger := utils.GetLogger(workDir + "/log/migrate_success.log")
+		migrateErrorLogger := utils.GetLogger(workDir + "/log/migrate_error.log")
+
 		for a := 1; a <= rowCount; a++ {
 			msg := <-results
 			fmt.Printf("%s \n", msg)
-			tools.GetLogger().Printf("%s", msg)
+
+			if msg.Error == nil {
+				migrateSuccessLogger.Printf("%s", msg)
+			}else {
+				migrateErrorLogger.Printf("%s", msg)
+			}
 		}
 	}
 }
@@ -318,6 +326,8 @@ func (tools Tools) MigrateCheck() {
 	}
 	close(jobs)
 
+	migrateCheckLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check.log")
+
 	for a := 1; a <= rowCount; a++ {
 		msg := <-results
 		length := msg.Length
@@ -325,9 +335,9 @@ func (tools Tools) MigrateCheck() {
 		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
 			if err == nil && i <= 10000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
 				//bucket.DeleteObject(msg.ObjectKey)
-				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v ; DEL\n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
+				migrateCheckLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v ; DEL\n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
 			} else {
-				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
+				migrateCheckLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
 			}
 		}
 
