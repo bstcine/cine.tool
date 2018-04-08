@@ -312,9 +312,9 @@ func (tools Tools) MigrateCheck() {
 		msg := <-results
 		length := msg.Length
 
-		if i, err := strconv.Atoi(length); i <= 30000 || err != nil || msg.Error != nil {
-			if err == nil && i <= 30000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
-				bucket.DeleteObject(msg.ObjectKey)
+		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
+			if err == nil && i <= 10000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
+				//bucket.DeleteObject(msg.ObjectKey)
 				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v ; DEL\n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
 			} else {
 				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
