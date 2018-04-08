@@ -18,6 +18,7 @@ import (
 	"sort"
 	"bytes"
 	"time"
+	"errors"
 )
 
 var serviceFilePath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
@@ -88,46 +89,53 @@ func (tools Tools) MigrateObject() {
 		_, err = os.Stat(serviceFilePath)
 		isServiceRun := err == nil
 
-		jobs := make(chan []string, rowCount)
-		results := make(chan string, rowCount)
+		jobs := make(chan OssInfo, rowCount)
+		results := make(chan OssInfo, rowCount)
 
 		for w := 1; w <= 10; w++ {
 			go func(id int) {
 				for ossObject := range jobs {
-					objectKey := ossObject[0]
-					objectUrl := ossObject[1]
-					localPath := ossObject[2]
-					objectNo := ossObject[3]
-
-					msg := "worker-" + strconv.Itoa(id) + "-" + objectNo + "/" + strconv.Itoa(rowCount) + ": "
+					objectKey := ossObject.ObjectKey
+					migrateUrl := ossObject.MigrateUrl
+					migratePath := ossObject.MigratePath
 
 					isExist, err := bucket.IsObjectExist(objectKey)
 					if err != nil {
-						results <- msg + objectKey + " 检查失败 => " + err.Error()
+						ossObject.Error = err
+						results <- ossObject
 						continue
 					}
 
 					if isExist {
-						results <- msg + objectKey + " 已经存在"
-						continue
+						//是否覆盖上传
+						if confMap["migrateReplace"] == "1" {
+							//删除
+							bucket.DeleteObject(objectKey)
+						}else {
+							ossObject.Error = errors.New("已经存在")
+							results <- ossObject
+							continue
+						}
 					}
 
-					if isServiceRun { //ESC
-						err = bucket.PutObjectFromFile(objectKey, localPath)
+					//上传
+					if isServiceRun { //ECS
+						err = bucket.PutObjectFromFile(objectKey, migratePath)
 					} else { //本地
 						/*localPath = localKjPath + objectKey
 						utils.DownloadFile(objectUrl, localPath)
 						err = bucket.PutObjectFromFile(objectKey, localPath)*/
-						body, err := utils.GetHttpFileBytes(objectUrl)
+						body, err := utils.GetHttpFileBytes(migrateUrl)
 						if err == nil {
 							err = bucket.PutObject(objectKey, body)
 						}
 					}
 
 					if err != nil {
-						results <- msg + localPath + " => " + objectKey + " 上传失败 => " + err.Error()
+						ossObject.Error = err
+						results <- ossObject
 					} else {
-						results <- msg + localPath + " => " + objectKey + " 上传成功"
+						results <- ossObject
 					}
 				}
 			}(w)
@@ -137,18 +145,21 @@ func (tools Tools) MigrateObject() {
 			urls := strings.Split(rows[i].(string), ";")
 
 			mediaUrl := urls[0]
-			urlPrefix := urls[1]
-			urlSuffix := urls[2]
+			lessonId := urls[3]
+			courseId := urls[4]
 
 			var objectKey string
-			var objectUrl string
-			var localPath string
+			var migrateUrl string
+			var migratePath string
 
 			if isCourseOrig {
 				objectKey = "kj/" + mediaUrl
-				objectUrl = "http://www.bstcine.com/f/" + mediaUrl
-				localPath = serviceFilePath + mediaUrl
+				migrateUrl = "http://www.bstcine.com/f/" + mediaUrl
+				migratePath = serviceFilePath + mediaUrl
 			} else {
+				urlPrefix := urls[1]
+				urlSuffix := urls[2]
+
 				if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
 					objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
 					objectKey = strings.Replace(objectKey, "/f/", "/", -1)
@@ -157,11 +168,11 @@ func (tools Tools) MigrateObject() {
 					objectKey = "kj/" + mediaUrl
 				}
 
-				objectUrl = urlPrefix + mediaUrl + urlSuffix
-				localPath = serviceKjFilePath + objectKey
+				migrateUrl = urlPrefix + mediaUrl + urlSuffix
+				migratePath = serviceKjFilePath + objectKey
 			}
 
-			jobs <- []string{objectKey, objectUrl, localPath, strconv.Itoa(i + 1)}
+			jobs <- OssInfo{ObjectKey: objectKey, MigrateUrl: migrateUrl, MigratePath: migratePath, CourseId: courseId, LessonId: lessonId, Seq: strconv.Itoa(i + 1)}
 		}
 		close(jobs)
 
@@ -304,7 +315,7 @@ func (tools Tools) MigrateCheck() {
 			migrateUrl = urlPrefix + mediaUrl + urlSuffix
 		}
 
-		jobs <- OssInfo{ObjectKey: objectKey, MigrateUrl: migrateUrl, CourseId: courseId, LessonId: lessonId, Remark: strconv.Itoa(i + 1)}
+		jobs <- OssInfo{ObjectKey: objectKey, MigrateUrl: migrateUrl, CourseId: courseId, LessonId: lessonId, Seq: strconv.Itoa(i + 1)}
 	}
 	close(jobs)
 
@@ -321,7 +332,7 @@ func (tools Tools) MigrateCheck() {
 			}
 		}
 
-		fmt.Printf("%s/%d %s \n", msg.Remark, rowCount, msg)
+		fmt.Printf("%s/%d %s \n", msg.Seq, rowCount, msg)
 	}
 }
 
@@ -438,13 +449,15 @@ func (tools Tools) ImgWaterMark() {
 资源信息类
 */
 type OssInfo struct {
-	ObjectKey  string //对象key
-	MigrateUrl string //迁移路径
-	Length     string //长度
-	CourseId   string //Course Id
-	LessonId   string //Lesson Id
-	Error      error  //error
-	Remark     string // 备注
+	ObjectKey   string //对象key
+	MigrateUrl  string //迁移路径
+	MigratePath string //迁移本地路径
+	Length      string //长度
+	CourseId    string //Course Id
+	LessonId    string //Lesson Id
+	Error       error  //error
+	Seq         string //seq
+	Remark      string // 备注
 }
 
 func (tools Tools) getClient() (*oss.Client, error) {
