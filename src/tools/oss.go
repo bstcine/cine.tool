@@ -55,7 +55,7 @@ func (tools Tools) MigrateObject() {
 		fmt.Println("暂时只支持获取课件资源")
 		return
 	}
-
+	
 	//迁移课程资源的类型 是否为原始资源
 	isCourseOrig := confMap["migrateCourseType"] == "orig"
 

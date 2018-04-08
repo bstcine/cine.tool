@@ -75,6 +75,16 @@ func GetFiles(password, fileType, cid string) (res map[string]interface{}, data 
 	return res, res["data"].([]interface{})
 }
 
+func ListWithCourses(request model.Request) (res model.ResList, courses []model.Course) {
+
+	CommonPost(conf.APIURL_Content_Course_List,request,&res)
+
+	coursesJson,_ := json.Marshal(res.Result.Rows)
+	json.Unmarshal([]byte(coursesJson),&courses)
+
+	return res, courses
+}
+
 func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chapter) {
 	CommonPost(conf.APIURL_Content_Chapter_ListWithMedia, request, &res)
 

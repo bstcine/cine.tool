@@ -1,5 +1,10 @@
 package model
 
+type Course struct {
+	Id string `json:"id"`
+	Name string `json:"name"`
+}
+
 type Chapter struct {
 	Id       string   `json:"id"`
 	Name     string   `json:"name"`

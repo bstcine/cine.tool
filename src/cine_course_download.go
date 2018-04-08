@@ -33,7 +33,7 @@ var oss_download_configFile_debug = "/Users/lidangkun/Desktop/oss_download/oss_d
 var oss_download_errorLog = conf.Course_download_errorLog
 var oss_download_errorLog_debug = "/Users/lidangkun/Desktop/oss_download/oss_error.txt"
 
-var oss_download_debug bool = false
+var oss_download_debug bool = conf.IsDebug
 
 var oss_download_endPoint string
 var oss_download_accessKeyId string
@@ -163,13 +163,28 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
  */
 func downloadRows(coursePath string, courseId string, rows []model.Chapter) {
 
+	var chapterName string
+	var lessonName string
+
 	for _,chapter := range rows {
 
-		var chapterPath = coursePath + "/" + chapter.Name
+		if strings.Contains(chapter.Name,"/") {
+			chapterName = strings.Replace(chapter.Name,"/","_",-1)
+		}else {
+			chapterName = chapter.Name
+		}
+
+		var chapterPath = coursePath + "/" + chapterName
 
 		for _,lesson := range chapter.Children {
 
-			var lessonPath = chapterPath + "/" + lesson.Name
+			if strings.Contains(lesson.Name,"/") {
+				lessonName = strings.Replace(lesson.Name,"/","_",-1)
+			}else {
+				lessonName = lesson.Name
+			}
+
+			var lessonPath = chapterPath + "/" + lessonName
 
 			downloadLesson(lessonPath,courseId,lesson)
 
