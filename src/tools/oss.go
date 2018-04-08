@@ -304,7 +304,7 @@ func (tools Tools) MigrateCheck() {
 			migrateUrl = urlPrefix + mediaUrl + urlSuffix
 		}
 
-		jobs <- OssInfo{ObjectKey:objectKey,MigrateUrl:migrateUrl,CourseId:courseId,LessonId:lessonId,Remark:strconv.Itoa(i + 1)}
+		jobs <- OssInfo{ObjectKey: objectKey, MigrateUrl: migrateUrl, CourseId: courseId, LessonId: lessonId, Remark: strconv.Itoa(i + 1)}
 	}
 	close(jobs)
 
@@ -312,8 +312,13 @@ func (tools Tools) MigrateCheck() {
 		msg := <-results
 		length := msg.Length
 
-		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
-			tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n",  msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl,msg.Length, msg.Error)
+		if i, err := strconv.Atoi(length); i <= 30000 || err != nil || msg.Error != nil {
+			if err == nil && i <= 30000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
+				bucket.DeleteObject(msg.ObjectKey)
+				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v ; DEL\n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
+			} else {
+				tools.GetLogger().Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
+			}
 		}
 
 		fmt.Printf("%s/%d %s \n", msg.Remark, rowCount, msg)
@@ -423,7 +428,6 @@ func (tools Tools) ImgWaterMark() {
 	}
 }
 
-
 /**
 ######################################################
 ###################  阿里提供的 OSS API  ##############
@@ -434,13 +438,13 @@ func (tools Tools) ImgWaterMark() {
 资源信息类
 */
 type OssInfo struct {
-	ObjectKey string //对象key
+	ObjectKey  string //对象key
 	MigrateUrl string //迁移路径
-	Length string //长度
-	CourseId string //Course Id
-	LessonId string //Lesson Id
-	Error error //error
-	Remark string // 备注
+	Length     string //长度
+	CourseId   string //Course Id
+	LessonId   string //Lesson Id
+	Error      error  //error
+	Remark     string // 备注
 }
 
 func (tools Tools) getClient() (*oss.Client, error) {
