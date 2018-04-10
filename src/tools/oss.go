@@ -286,8 +286,20 @@ func (tools Tools) MigrateCheck() {
 					continue
 				}
 
-				length := header.Get("Content-Length")
-				ossObject.Length = length
+				length,err := strconv.Atoi(header.Get("Content-Length"))
+				if err == nil{
+					ossObject.Length = length
+				}else {
+					ossObject.Length = 0
+				}
+
+				headResp, err := http.Head(ossObject.MigrateUrl)
+				if err == nil{
+					ossObject.EcsLength = int(headResp.ContentLength)
+				}else {
+					ossObject.EcsLength = 0
+				}
+				headResp.Body.Close()
 
 				results <- ossObject
 			}
@@ -326,22 +338,32 @@ func (tools Tools) MigrateCheck() {
 	}
 	close(jobs)
 
-	migrateCheckLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check.log")
+	migrateCheckOssLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check_oss.log")
+	migrateCheckEcsLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check_ecs.log")
+	migrateCheckEquallyLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check_equally.log")
+	migrateCheckSmallLogger := utils.GetLogger(tools.WorkPath + "/log/migrate_check_small.log")
 
 	for a := 1; a <= rowCount; a++ {
 		msg := <-results
-		length := msg.Length
+		ossLength := msg.Length
+		ecsLength := msg.EcsLength
 
-		if i, err := strconv.Atoi(length); i <= 10000 || err != nil || msg.Error != nil {
-			if err == nil && i <= 10000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
-				//bucket.DeleteObject(msg.ObjectKey)
-				migrateCheckLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v ; DEL\n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
-			} else {
-				migrateCheckLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ;SIZE: %sB ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Length, msg.Error)
+		if msg.Error != nil {
+			migrateCheckOssLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Error)
+		} else {
+			if ecsLength == 0 {
+				migrateCheckEcsLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
+			} else if ossLength < ecsLength {
+				migrateCheckEquallyLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
+
+				if ossLength <= 5000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
+					//bucket.DeleteObject(msg.ObjectKey)
+					migrateCheckSmallLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
+				}
 			}
 		}
 
-		fmt.Printf("%s/%d %s \n", msg.Seq, rowCount, msg)
+		fmt.Printf("%s/%d %+v \n", msg.Seq, rowCount, msg)
 	}
 }
 
@@ -461,7 +483,8 @@ type OssInfo struct {
 	ObjectKey   string //对象key
 	MigrateUrl  string //迁移路径
 	MigratePath string //迁移本地路径
-	Length      string //长度
+	Length      int //长度
+	EcsLength   int //ECS 长度
 	CourseId    string //Course Id
 	LessonId    string //Lesson Id
 	Error       error  //error
