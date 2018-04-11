@@ -56,7 +56,7 @@ func (tools Tools) MigrateObject() {
 		fmt.Println("暂时只支持获取课件资源")
 		return
 	}
-	
+
 	//迁移课程资源的类型 是否为原始资源
 	isCourseOrig := confMap["migrateCourseType"] == "orig"
 
@@ -73,19 +73,9 @@ func (tools Tools) MigrateObject() {
 
 		fmt.Printf("%s 课程,共有 %d 个 %s 资源,已经生成到 %s", confMap["migrateCourse"], len(listFiles), confMap["migrateCourseType"], workDir+confMap["migrateListFileName"])
 	} else if confMap["migrateModel"] == "local" { //本地资源上传
-		client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
-		if err != nil {
-			tools.HandleError(err)
-			return
-		}
+		bucket := tools.getBucket()
 
-		bucket, err := client.Bucket(confMap["Bucket"])
-		if err != nil {
-			tools.HandleError(err)
-			return
-		}
-
-		_, err = os.Stat(serviceFilePath)
+		_, err := os.Stat(serviceFilePath)
 		isServiceRun := err == nil                    //是否在服务器运行
 		isReplace := confMap["migrateReplace"] == "1" //是否覆盖上传
 
@@ -184,7 +174,7 @@ func (tools Tools) MigrateObject() {
 
 			if msg.Error == nil {
 				migrateSuccessLogger.Printf("%s", msg)
-			}else {
+			} else {
 				migrateErrorLogger.Printf("%s", msg)
 			}
 		}
@@ -199,17 +189,7 @@ func (tools Tools) SetObjectACL() {
 
 	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["aclCourse"])
 
-	client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
-	if err != nil {
-		tools.HandleError(err)
-		return
-	}
-
-	bucket, err := client.Bucket(confMap["Bucket"])
-	if err != nil {
-		tools.HandleError(err)
-		return
-	}
+	bucket := tools.getBucket()
 
 	objectACL := oss.ACLDefault
 	aclType := confMap["aclType"]
@@ -236,7 +216,7 @@ func (tools Tools) SetObjectACL() {
 		objectKey := urlPrefix + mediaUrl + urlSuffix
 
 		// 设置Object的访问权限
-		err = bucket.SetObjectACL(objectKey, objectACL)
+		err := bucket.SetObjectACL(objectKey, objectACL)
 		if err != nil {
 			tools.HandleError(err)
 		} else {
@@ -261,17 +241,7 @@ func (tools Tools) MigrateCheck() {
 	_, rows := utils.GetFiles(confMap["srcPassword"], confMap["migrateType"], confMap["migrateCourse"])
 	rowCount := len(rows)
 
-	client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
-	if err != nil {
-		tools.HandleError(err)
-		return
-	}
-
-	bucket, err := client.Bucket(confMap["Bucket"])
-	if err != nil {
-		tools.HandleError(err)
-		return
-	}
+	bucket := tools.getBucket()
 
 	jobs := make(chan OssInfo, rowCount)
 	results := make(chan OssInfo, rowCount)
@@ -286,17 +256,17 @@ func (tools Tools) MigrateCheck() {
 					continue
 				}
 
-				length,err := strconv.Atoi(header.Get("Content-Length"))
-				if err == nil{
+				length, err := strconv.Atoi(header.Get("Content-Length"))
+				if err == nil {
 					ossObject.Length = length
-				}else {
+				} else {
 					ossObject.Length = 0
 				}
 
 				headResp, err := http.Head(ossObject.MigrateUrl)
-				if err == nil{
+				if err == nil {
 					ossObject.EcsLength = int(headResp.ContentLength)
-				}else {
+				} else {
 					ossObject.EcsLength = 0
 				}
 				headResp.Body.Close()
@@ -371,26 +341,33 @@ func (tools Tools) MigrateCheck() {
 资源(kj)中非 jpg 图片转 jpg
  */
 func (tools Tools) ImgFormatJPG() {
+	workDir := tools.WorkPath
 	confMap := tools.ConfMap
 
 	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["imgCourse"])
 	rowCount := len(rows)
 
-	jobs := make(chan []string, rowCount)
-	results := make(chan []string, rowCount)
+	jobs := make(chan OssInfo, rowCount)
+	results := make(chan OssInfo, rowCount)
 
 	for w := 1; w <= 25; w++ {
 		go func(id int) {
 			for ossObject := range jobs {
-				objectKey := ossObject[2]
+				objectKey := ossObject.ObjectKey
 
-				suf := objectKey[strings.LastIndex(objectKey, "."):len(objectKey)]
+				suf := objectKey[strings.LastIndex(objectKey, "."):]
 
 				if suf != ".mp3" && suf != ".mp4" && suf != ".jpg" {
-					msg := tools.imgProcessSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg", "image/format,jpg")
-					results <- append(ossObject, "格式化成功:"+msg)
+					msg, err := tools.imgProcessSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg", "image/format,jpg")
+					if err == nil {
+						ossObject.Remark = "格式化成功:" + msg
+					} else {
+						ossObject.Error = err
+					}
+					results <- ossObject
 				} else {
-					results <- append(ossObject, "无需格式化")
+					ossObject.Remark = "无需格式化"
+					results <- ossObject
 				}
 
 			}
@@ -401,22 +378,21 @@ func (tools Tools) ImgFormatJPG() {
 		urls := strings.Split(rows[i].(string), ";")
 
 		mediaUrl := urls[0]
+		courseId := urls[4]
 		lessonId := urls[3]
 
-		var objectKey string
-		var objectUrl string
-
-		objectKey = "kj/" + mediaUrl
-		objectUrl = "http://oss.bstcine.com/" + objectKey
-
-		jobs <- []string{strconv.Itoa(i+1) + "/" + strconv.Itoa(rowCount), lessonId, objectKey, objectUrl}
+		jobs <- OssInfo{Seq: strconv.Itoa(i + 1), CourseId: courseId, LessonId: lessonId, ObjectKey: "kj/" + mediaUrl}
 	}
 	close(jobs)
 
+	ossImgFormatLogger := utils.GetLogger(workDir + "/log/oss_img_format.log")
+
 	for a := 1; a <= rowCount; a++ {
-		msg := <-results
-		tools.GetLogger().Println(msg)
-		fmt.Println(msg)
+		ossObject := <-results
+
+		ossImgFormatLogger.Println(ossObject)
+
+		fmt.Println(ossObject)
 	}
 }
 
@@ -424,30 +400,38 @@ func (tools Tools) ImgFormatJPG() {
 课件资源图片加水印
  */
 func (tools Tools) ImgWaterMark() {
+	workDir := tools.WorkPath
 	confMap := tools.ConfMap
 
 	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["imgCourse"])
 	rowCount := len(rows)
 
-	jobs := make(chan []string, rowCount)
-	results := make(chan []string, rowCount)
+	jobs := make(chan OssInfo, rowCount)
+	results := make(chan OssInfo, rowCount)
 
 	for w := 1; w <= 25; w++ {
 		go func(id int) {
 			for ossObject := range jobs {
-				courseId := ossObject[1]
-				mediaUrl := ossObject[3]
+				courseId := ossObject.CourseId
+				mediaUrl := ossObject.ObjectKey[3:]
 
 				name := mediaUrl[0:strings.LastIndex(mediaUrl, ".")]
-				suf := mediaUrl[strings.LastIndex(mediaUrl, "."):len(mediaUrl)]
+				suf := mediaUrl[strings.LastIndex(mediaUrl, "."):]
 
 				if suf == ".jpg" {
-					msg := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+"/"+name+".jpg", "style/"+confMap["imgStyle"])
-					results <- append(ossObject, "图片加水印-"+msg)
-				} else {
-					results <- append(ossObject, "无需加水印")
-				}
+					msg, err := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+"/"+name+".jpg", "style/"+confMap["imgStyle"])
 
+					if err == nil {
+						ossObject.Remark = "原图生成水印图成功：" + msg
+					} else {
+						ossObject.Error = err
+					}
+
+					results <- ossObject
+				} else {
+					ossObject.Remark = "无需加水印"
+					results <- ossObject
+				}
 			}
 		}(w)
 	}
@@ -459,13 +443,17 @@ func (tools Tools) ImgWaterMark() {
 		lessonId := urls[3]
 		mediaUrl := urls[0]
 
-		jobs <- []string{strconv.Itoa(i+1) + "/" + strconv.Itoa(rowCount), courseId, lessonId, mediaUrl}
+		jobs <- OssInfo{Seq: strconv.Itoa(i + 1), CourseId: courseId, LessonId: lessonId, ObjectKey: "kj/" + mediaUrl}
 	}
 	close(jobs)
 
+	ossImgWatermarkLogger := utils.GetLogger(workDir + "/log/oss_img_watermark.log")
+
 	for a := 1; a <= rowCount; a++ {
 		msg := <-results
-		tools.GetLogger().Println(msg)
+
+		ossImgWatermarkLogger.Println(msg)
+
 		fmt.Println(msg)
 	}
 }
@@ -481,10 +469,11 @@ func (tools Tools) ImgWaterMark() {
 */
 type OssInfo struct {
 	ObjectKey   string //对象key
+	ObjectUrl   string //对象路径
 	MigrateUrl  string //迁移路径
 	MigratePath string //迁移本地路径
-	Length      int //长度
-	EcsLength   int //ECS 长度
+	Length      int    //长度
+	EcsLength   int    //ECS 长度
 	CourseId    string //Course Id
 	LessonId    string //Lesson Id
 	Error       error  //error
@@ -492,31 +481,13 @@ type OssInfo struct {
 	Remark      string // 备注
 }
 
-func (tools Tools) getClient() (*oss.Client, error) {
-	if tools.OSSClient != nil {
-		return tools.OSSClient, nil
-	}
-
+/**
+获取 Oss Bucket
+ */
+func (tools Tools) getBucket() (*oss.Bucket) {
 	confMap := tools.ConfMap
 
 	client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
-	if err != nil {
-		tools.HandleError(err)
-	}
-
-	tools.OSSClient = client
-
-	return client, err
-}
-
-func (tools Tools) getBucket() (*oss.Bucket, error) {
-	if tools.OSSBucket != nil {
-		return tools.OSSBucket, nil
-	}
-
-	confMap := tools.ConfMap
-
-	client, err := tools.getClient()
 	if err != nil {
 		tools.HandleError(err)
 	}
@@ -526,15 +497,13 @@ func (tools Tools) getBucket() (*oss.Bucket, error) {
 		tools.HandleError(err)
 	}
 
-	tools.OSSBucket = bucket
-
-	return bucket, err
+	return bucket
 }
 
 /**
-OSS 图片处理
+OSS 图片处理并保存
  */
-func (tools Tools) imgProcessSave(objKey, newObjKey, process string) string {
+func (tools Tools) imgProcessSave(objKey, newObjKey, process string) (string, error) {
 	var bucket = "static-bstcine"
 	var region = "oss-cn-shanghai"
 	var ossHost = "http://" + bucket + "." + region + ".aliyuncs.com/"
@@ -548,7 +517,7 @@ func (tools Tools) imgProcessSave(objKey, newObjKey, process string) string {
 	data := "x-oss-process=" + process + "|sys/saveas,o_" + newObjKey + ",b_" + bucket
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
-		// handle error
+		return "", err
 	}
 
 	ossDate := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
@@ -563,10 +532,10 @@ func (tools Tools) imgProcessSave(objKey, newObjKey, process string) string {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		// handle error
+		return "", err
 	}
 
-	return string(body)
+	return string(body), nil
 }
 
 const (
