@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"time"
 	"errors"
+	"encoding/json"
 )
 
 var serviceFilePath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
@@ -344,6 +345,9 @@ func (tools Tools) ImgFormatJPG() {
 	workDir := tools.WorkPath
 	confMap := tools.ConfMap
 
+	isFormatDel := confMap["imgFormatDel"] == "1"
+	bucket := tools.getBucket()
+
 	_, rows := utils.GetFiles(confMap["srcPassword"], "0", confMap["imgCourse"])
 	rowCount := len(rows)
 
@@ -360,7 +364,19 @@ func (tools Tools) ImgFormatJPG() {
 				if suf != ".mp3" && suf != ".mp4" && suf != ".jpg" {
 					msg, err := tools.imgProcessSave(objectKey, objectKey[0:strings.LastIndex(objectKey, ".")]+".jpg", "image/format,jpg")
 					if err == nil {
-						ossObject.Remark = "格式化成功:" + msg
+						var res map[string]interface{}
+						json.Unmarshal([]byte(msg), &res)
+
+						status, ok := res["status"]
+						if res != nil && ok && status == "OK" {
+							ossObject.Remark = "格式化成功:" + msg
+
+							if isFormatDel {//格式化并删除原文件
+								bucket.DeleteObject(objectKey)
+							}
+						} else {
+							ossObject.Error = errors.New("格式化失败：" + msg)
+						}
 					} else {
 						ossObject.Error = err
 					}
@@ -422,7 +438,15 @@ func (tools Tools) ImgWaterMark() {
 					msg, err := tools.imgProcessSave("kj/"+name+".jpg", "img/"+courseId+"/"+name+".jpg", "style/"+confMap["imgStyle"])
 
 					if err == nil {
-						ossObject.Remark = "原图生成水印图成功：" + msg
+						var res map[string]interface{}
+						json.Unmarshal([]byte(msg), &res)
+
+						status, ok := res["status"]
+						if res != nil && ok && status == "OK" {
+							ossObject.Remark = "原图生成水印图成功:" + msg
+						} else {
+							ossObject.Error = errors.New("原图生成水印图失败：" + msg)
+						}
 					} else {
 						ossObject.Error = err
 					}
