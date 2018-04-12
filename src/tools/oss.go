@@ -332,7 +332,7 @@ func (tools Tools) MigrateCheck() {
 			} else if ossLength < ecsLength {
 				migrateCheckEquallyLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 
-				if ossLength <= 5000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
+				if ossLength <= 1500 && msg.ObjectKey != "kj/" && strings.Count(msg.ObjectKey, "/") >= 3 {
 					bucket.DeleteObject(msg.ObjectKey)
 					migrateCheckSmallLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 				}
