@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"bufio"
+	"log"
 )
 
 
@@ -64,6 +65,25 @@ func ClientInput(endbyte byte) (string, error) {
 	input = strings.Replace(input,string(endData[:]),"",-1)
 
 	return input,err
+}
+
+/**
+获取日志打印器
+ */
+func GetLogger(outPath string) *log.Logger {
+	dirPath := outPath[0:strings.LastIndex(outPath, "/")+1]
+	if _, err := os.Stat(dirPath); err != nil {
+		os.MkdirAll(dirPath, 0777)
+	}
+
+	logFile, err := os.Create(outPath)
+
+	if err != nil {
+		log.Fatalln("open file error !")
+	}
+
+	logger := log.New(logFile, "[Info]", log.Lshortfile)
+	return logger
 }
 
 /**
