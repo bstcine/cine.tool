@@ -115,7 +115,12 @@ func (tools Tools) MigrateObject() {
 						/*localPath = localKjPath + objectKey
 						utils.DownloadFile(objectUrl, localPath)
 						err = bucket.PutObjectFromFile(objectKey, localPath)*/
-						body, err := utils.GetHttpFileBytes(migrateUrl)
+						body, byteLen, err := utils.GetHttpFileBytes(migrateUrl)
+
+						if err == nil && byteLen <= 1500 {
+							err = errors.New("小于1.5K")
+						}
+
 						if err == nil {
 							err = bucket.PutObject(objectKey, body)
 						}
@@ -328,7 +333,7 @@ func (tools Tools) MigrateCheck() {
 				migrateCheckEquallyLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 
 				if ossLength <= 5000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
-					//bucket.DeleteObject(msg.ObjectKey)
+					bucket.DeleteObject(msg.ObjectKey)
 					migrateCheckSmallLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 				}
 			}
