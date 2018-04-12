@@ -15,6 +15,35 @@ import (
 	"bytes"
 )
 
+/// 往文件中追加文字
+/**
+ * @param filePath 需要追加的文件路径
+ * @param content 准备追加的文字信息
+ */
+func AppendStringToFile(filePath string, content string) bool {
+
+	// 判断文件是否存在
+	_,err := os.Stat(filePath)
+
+	if err != nil {
+		os.Create(filePath)
+	}
+
+	fileHandler,err := os.OpenFile(filePath,os.O_WRONLY|os.O_APPEND,0666)
+
+	if err != nil {
+
+		return  false
+	}
+
+	_,err = fileHandler.WriteString(content)
+
+	if err != nil {
+		return  false
+	}
+	return  true
+}
+
 /// 创建目录
 /**
  * @param path 资源文件路径

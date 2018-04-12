@@ -26,7 +26,6 @@ func ChangeInt(value int) string {
 	return  s
 }
 
-
 /// 读取标准用户输入流（包含提示用户的内容）
 /**
  *
@@ -66,7 +65,6 @@ func ClientInput(endbyte byte) (string, error) {
 
 	return input,err
 }
-
 
 /**
 获取配置文件参数

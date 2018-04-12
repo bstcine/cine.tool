@@ -18,8 +18,21 @@ type Lesson struct {
 	Medias []Media `json:"medias"`
 }
 
+type CheckLesson struct {
+	Id      string  `json:"lesson_id"`
+	Name    string  `json:"lesson_name"`
+	Medias  []CheckMedia `json:"medias"`
+}
+
+type CheckMedia struct {
+	Seq int `json:"seq"`
+	Url string `json:"url"`
+	Images []Image `json:"images"`
+}
+
 type Media struct {
 	Id     string  `json:"id"`
+	Seq    int     `json:"seq"`
 	Type   string  `json:"type"`
 	Url    string  `json:"url"`
 	Images []Image `json:"images"`

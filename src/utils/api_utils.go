@@ -12,6 +12,7 @@ import (
 )
 
 func GetBaseUrl(url string) string {
+
 	if conf.IsDebug {
 		url = conf.API_BASE_URL_TEST + url
 	} else {
@@ -86,6 +87,7 @@ func ListWithCourses(request model.Request) (res model.ResList, courses []model.
 }
 
 func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chapter) {
+
 	CommonPost(conf.APIURL_Content_Chapter_ListWithMedia, request, &res)
 
 	rowsJson, _ := json.Marshal(res.Result.Rows)
@@ -94,26 +96,88 @@ func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chap
 	return res, rows
 }
 
+//获取待检查的lesson列表
+func ListWithCheckMedias(request model.Request) (res model.ResList, lessons []model.CheckLesson) {
+
+	CommonPost(conf.APIURL_Content_Lesson_CheckListWithLessons, request, &res)
+
+	rowsJson,_ := json.Marshal(res.Result.Rows)
+
+	json.Unmarshal([]byte(rowsJson),&lessons)
+
+	return res, lessons
+}
+
+//更新Lesson检查状态
 func UpdateLessonCheckStatus(request model.Request) (res model.ResCheckList, status bool) {
 
-	url := "http://apptest.bstcine.com/api/tool/content/lesson/checkStatus"
+	CommonPost(conf.APIURL_Content_Lesson_CheckStatus,request,&res)
 
-	jsonBytes, _ := json.Marshal(request)
-
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBytes))
-
-	if err != nil {
-		println("更新请求出错：", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		fmt.Println("解析出错：", err)
-	}
-
-	json.Unmarshal(body, &res)
+	fmt.Println(res)
 
 	return res, res.Result["status"]
+}
+
+//*****************************************************************
+//*****************************************************************
+//************************ 获取服务器权限 ***************************
+//*****************************************************************
+//*****************************************************************
+/// 登入服务器，获取token
+/**
+ * @param
+ * @return token
+ */
+func GetToken(account string,password string) string {
+
+	for i := 1; i <= 5; i++ {
+
+		if account == "" {
+
+			// 获取输入账户名
+			account = ClientInputWithMessage("请输入用户名：",'\n')
+
+			if account == "" {
+
+				return ""
+			}
+		}
+
+		if password == "" {
+
+			password = ClientInputWithMessage("请输入密码：",'\n')
+
+			if password == "" {
+
+				return ""
+			}
+		}
+
+		data := make(map[string]interface{})
+		data["phone"] = account
+
+		data["password"] = password
+
+		// 登入服务器
+		_, token := Signin(model.Request{"", "cine.web", data})
+
+		if len(token) <= 0 || token == "" {
+
+			if i == 5 {
+				fmt.Println("您连续输入账户名和密码超出五次，程序结束！\n请认真确定后再重启本程序")
+			} else {
+				fmt.Println("用户名或密码错误，请重新输入")
+
+				account = ""
+				password = ""
+			}
+
+		} else {
+
+			return token
+		}
+
+	}
+
+	return ""
 }
