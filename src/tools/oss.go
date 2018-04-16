@@ -115,7 +115,12 @@ func (tools Tools) MigrateObject() {
 						/*localPath = localKjPath + objectKey
 						utils.DownloadFile(objectUrl, localPath)
 						err = bucket.PutObjectFromFile(objectKey, localPath)*/
-						body, err := utils.GetHttpFileBytes(migrateUrl)
+						body, byteLen, err := utils.GetHttpFileBytes(migrateUrl)
+
+						if err == nil && byteLen <= 1500 {
+							err = errors.New("小于1.5K")
+						}
+
 						if err == nil {
 							err = bucket.PutObject(objectKey, body)
 						}
@@ -270,7 +275,6 @@ func (tools Tools) MigrateCheck() {
 				} else {
 					ossObject.EcsLength = 0
 				}
-				headResp.Body.Close()
 
 				results <- ossObject
 			}
@@ -319,18 +323,16 @@ func (tools Tools) MigrateCheck() {
 		ossLength := msg.Length
 		ecsLength := msg.EcsLength
 
-		if msg.Error != nil {
+		if msg.Error != nil {//OSS 访问出错的资源
 			migrateCheckOssLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Error)
 		} else {
-			if ecsLength == 0 {
+			if ecsLength == 0 {//ECS 不存在的资源
 				migrateCheckEcsLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
-			} else if ossLength < ecsLength {
+			} else if ossLength < ecsLength {//迁移失败的资源
 				migrateCheckEquallyLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
-
-				if ossLength <= 5000 && msg.ObjectKey != "kj/" && len(msg.ObjectKey) > 5 {
-					//bucket.DeleteObject(msg.ObjectKey)
-					migrateCheckSmallLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
-				}
+			} else if ossLength <= 1500 && msg.ObjectKey != "kj/" && strings.Count(msg.ObjectKey, "/") >= 3 { //小于1.5KB的资源
+				bucket.DeleteObject(msg.ObjectKey)
+				migrateCheckSmallLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 			}
 		}
 
@@ -371,7 +373,7 @@ func (tools Tools) ImgFormatJPG() {
 						if res != nil && ok && status == "OK" {
 							ossObject.Remark = "格式化成功:" + msg
 
-							if isFormatDel {//格式化并删除原文件
+							if isFormatDel { //格式化并删除原文件
 								bucket.DeleteObject(objectKey)
 							}
 						} else {

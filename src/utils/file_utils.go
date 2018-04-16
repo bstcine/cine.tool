@@ -99,7 +99,7 @@ func GetOutPath(dir string) string {
 /**
 获取网络文件流
  */
-func GetHttpFileBytes(url string) (*bytes.Buffer,error) {
+func GetHttpFileBytes(url string) (*bytes.Buffer,int64,error) {
 
 	file := path.Base(url)
 
@@ -107,29 +107,29 @@ func GetHttpFileBytes(url string) (*bytes.Buffer,error) {
 
 	headResp, err := http.Head(url)
 	if err != nil {
-		return nil,err
+		return nil,0,err
 	}
 
 	defer headResp.Body.Close()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil,err
+		return nil,0,err
 	}
 
 	defer resp.Body.Close()
 
 	buf := new(bytes.Buffer)
-	len,err := buf.ReadFrom(resp.Body)
+	byteLen,err := buf.ReadFrom(resp.Body)
 
 	if err != nil {
-		return nil,err
+		return nil,0,err
 	}
 
 	elapsed := time.Since(start)
-	log.Printf("get file bytes(%d) %s from %s - completed in %s \n",len, file, url,elapsed)
+	log.Printf("get file bytes(%d) %s from %s - completed in %s \n",byteLen, file, url,elapsed)
 
-	return buf,nil
+	return buf,byteLen,nil
 }
 
 // readLines reads a whole file into memory
