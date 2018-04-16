@@ -26,6 +26,7 @@ type CheckLesson struct {
 
 type CheckMedia struct {
 	Seq int `json:"seq"`
+	CheckStatus int `json:"check_status"`
 	Url string `json:"url"`
 	Images []Image `json:"images"`
 }

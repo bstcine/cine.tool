@@ -12,14 +12,20 @@ import (
 )
 
 var checkConfigFile_debug = "/Users/lidangkun/Desktop/oss_checkConfig"
+var checkConfig_debug = "/Users/lidangkun/Desktop/oss_checkConfig/cine_course_check.cfg"
 var checkResourceLog_bug = "/Users/lidangkun/Desktop/oss_checkConfig/resourceLog.txt"
 
 var checkWorkDir string
+var checkConfig  string
 var checkResourceLog string
 
 var checkCount int
 
 var rounterCount = 6
+
+type config struct {
+
+}
 
 type checkResource struct {
 
@@ -28,6 +34,7 @@ type checkResource struct {
 	objectKey   string
 	mediaType   int       // 多媒体资源类型，3代表media,2代表加水印图，1代表原图
 	mediaSeq    int       // medis序号
+	checkStatus int       // 原始检测状态  2表示只没有原图，其余全部检查
 }
 
 type checkResult struct {
@@ -45,9 +52,11 @@ func main() {
 	// 获取配置信息
 	if conf.IsDebug {
 		checkWorkDir = checkConfigFile_debug
+		checkConfig = checkConfig_debug
 		checkResourceLog = checkResourceLog_bug
 	}else {
 		checkWorkDir = conf.Course_checkWorkDir
+		checkConfig = conf.Course_checkConfig
 		checkResourceLog = conf.Course_check_log
 	}
 
@@ -55,14 +64,22 @@ func main() {
 
 	os.Remove(checkResourceLog)
 
-	// 登录服务器获取权限
-	checkToken := utils.GetToken("","")
+	// 读取配置服务
+    checkAccount,checkPassword,checkCourseIds := getConfigs()
 
-	courses := getCourses(checkToken)
+	// 登录服务器获取权限
+	checkToken := utils.GetToken(checkAccount,checkPassword)
+
+	courses := getCourses(checkToken,checkCourseIds)
 
 	for _,courseModel := range courses {
 
 		lessons := getLessons(checkToken,courseModel.Id)
+
+		if len(lessons) == 0 {
+			fmt.Println(courseModel.Id,courseModel.Name,"已经检查完毕")
+			continue
+		}
 
 		// 获取待检查资源数量
 		var resourceCount = 0
@@ -93,21 +110,22 @@ func main() {
 		// 监听工作结果
 		updateData := dealResults(resultChan,courseModel,resourceCount)
 
-		close(resultChan)
-
 		fmt.Println("获取更新结果：",courseModel.Name,"\n",updateData)
 
-		//// 更新该状态
-		//_,status := utils.UpdateLessonCheckStatus(model.Request{checkToken,"cine.web",updateData})
-		//
-		//if !status {
-		//	fmt.Println("更新失败",courseModel.Id,courseModel.Name)
-		//}else {
-		//	fmt.Println("更新成功",courseModel.Id,courseModel.Name)
-		//}
+		// 更新该状态
+		_,status := utils.UpdateLessonCheckStatus(model.Request{checkToken,"cine.web",updateData})
+
+		if !status {
+			fmt.Println("更新失败",courseModel.Id,courseModel.Name)
+		}else {
+			fmt.Println("更新成功",courseModel.Id,courseModel.Name)
+		}
 
 	}
 
+	// 结束
+
+	fmt.Println("工作结束！")
 }
 
 // lessons加入工作队列
@@ -128,16 +146,20 @@ func addJobsWithMedias(jobs chan checkResource,courseModel model.Course,lessonMo
 	for _,mediaModel := range medias  {
 
 		// 创建一个media资源
-		mediaResource := checkResource{
-			lessonId:lessonModel.Id,
-			lessonName:lessonModel.Name,
-			objectKey:("kj/"+mediaModel.Url),
-			mediaType:3,
-			mediaSeq:mediaModel.Seq,
-		}
 
-		// 将资源加入工作组
-		jobs <- mediaResource
+		if mediaModel.CheckStatus != 2 {
+
+			mediaResource := checkResource{
+				lessonId:lessonModel.Id,
+				lessonName:lessonModel.Name,
+				objectKey:("kj/"+mediaModel.Url),
+				mediaType:3,
+				mediaSeq:mediaModel.Seq,
+			}
+
+			// 将资源加入工作组
+			jobs <- mediaResource
+		}
 
 		// 调用Image资源加入工作组
 		addJobsWithImages(jobs,courseModel,lessonModel,mediaModel,mediaModel.Images)
@@ -160,8 +182,6 @@ func addJobsWithImages(jobs chan checkResource,courseModel model.Course,lessonMo
 		// 判断原始图片是否存在
 		originPath := "kj/" + imagePath
 
-		usePath := "img/" + courseModel.Id + "/" + imagePath
-
 		imageOriginResource := checkResource{
 			lessonId:lessonModel.Id,
 			lessonName:lessonModel.Name,
@@ -170,16 +190,23 @@ func addJobsWithImages(jobs chan checkResource,courseModel model.Course,lessonMo
 			mediaSeq:mediaModel.Seq,
 		}
 
-		imageUseResource := checkResource{
-			lessonId:lessonModel.Id,
-			lessonName:lessonModel.Name,
-			objectKey:usePath,
-			mediaType:2,
-			mediaSeq:mediaModel.Seq,
-		}
-
 		jobs <- imageOriginResource
-		jobs <- imageUseResource
+
+		if mediaModel.CheckStatus != 2 {
+
+			usePath := "img/" + courseModel.Id + "/" + imagePath
+
+			imageUseResource := checkResource{
+				lessonId:lessonModel.Id,
+				lessonName:lessonModel.Name,
+				objectKey:usePath,
+				mediaType:2,
+				mediaSeq:mediaModel.Seq,
+			}
+
+			jobs <- imageUseResource
+
+		}
 
 	}
 
@@ -230,7 +257,7 @@ func dealResults(results chan checkResult,courseModel model.Course,resourceCount
 			continue
 		}
 
-		lessonDict["check_status"] = 2
+		lessonDict["check_status"] = 0
 
 		var mediaDicts []map[string]interface{}
 
@@ -286,115 +313,21 @@ func dealResults(results chan checkResult,courseModel model.Course,resourceCount
 
 	}
 
+	var lessonArray []map[string]interface{}
+
 	// 打包检查结果资源
+	for _,value := range lessonDicts{
+		lessonArray = append(lessonArray,value)
+	}
 
 	updateData := make(map[string]interface{})
 
-	updateData["lesson_ids"] = lessonDicts
+	updateData["lesson_ids"] = lessonArray
+
+	close(results)
 
 	return updateData
 }
-
-/// 检查Lesson 数组迁移状态，需要返回整组lesson的状态字典
-/**
- * @ courseModel 课程对象，便于处理课程id 和课程名称
- * @ lessons 待检查的lesson数组
- * @return 返回检查状态数组，每一个元素都包含一个lessond和一个lesson_status
- *         如果检查存在错误，则还要包含错误的meidas列表
- */
-//func checkLessons(courseModel model.Course, lessons []model.CheckLesson) (lessonsResult []map[string]interface{}) {
-//
-//	var checkResult []map[string]interface{}
-//
-//	for _,lessonModel := range lessons {
-//
-//		errorMessage := "#" + courseModel.Id + "-" + courseModel.Name + "-" + lessonModel.Id + "-" + lessonModel.Name + " : "
-//
-//		errorLesson := ""
-//
-//		var mediasResult []map[string]interface{}
-//
-//		for _,mediaModel := range lessonModel.Medias {
-//
-//			mediaResult := make(map[string]interface{})
-//
-//			mediaResult["seq"] = mediaModel.Seq
-//
-//			errorMap := make(map[string]string)
-//
-//			mediaStatus := 0
-//
-//			if !checkMediaStatus(mediaModel.Url) {
-//				errorMap["seq"] = strconv.Itoa(mediaModel.Seq)
-//				errorMap["error_status"] = "3"
-//				mediaStatus = 3
-//			}
-//
-//			for _,imageModel := range mediaModel.Images{
-//
-//				imageStatus := checkImageStatus(courseModel.Id,imageModel.Url)
-//
-//				if imageStatus != 1 {
-//
-//					if mediaStatus != 3 {
-//						mediaStatus = imageStatus
-//					}
-//
-//					errorMap["seq"] = strconv.Itoa(mediaModel.Seq)
-//
-//					if errorMap["check_status"] == "" {
-//						errorMap["check_status"] = strconv.Itoa(imageStatus)
-//					}
-//
-//				}
-//
-//			}
-//
-//			if mediaStatus != 0 {
-//				mediaResult["status"] = mediaStatus
-//				mediasResult = append(mediasResult,mediaResult)
-//			}
-//
-//			// 将errorMap中的信息拼接
-//			if len(errorMap) == 0 {
-//				continue
-//			}
-//			errorString := getErrorString(courseModel.Id,lessonModel.Id,lessonModel.Name,errorMap["seq"],errorMap["check_status"])
-//
-//			if errorLesson == "" {
-//				errorLesson = errorString
-//			}else {
-//				errorLesson = errorLesson + "\n" + errorString
-//			}
-//
-//		}
-//
-//		lessonResult := make(map[string]interface{})
-//
-//		lessonResult["lesson_id"] = lessonModel.Id
-//
-//		// 判断是否存在错误信息
-//		if errorLesson == "" {
-//
-//			lessonResult["check_status"] = 1
-//
-//			checkResult = append(checkResult,lessonResult)
-//
-//			continue
-//		}
-//
-//		lessonResult["check_status"] = 2
-//
-//		lessonResult["medias"] = mediasResult
-//
-//		checkResult = append(checkResult,lessonResult)
-//
-//		utils.AppendStringToFile(checkResourceLog,errorMessage + "\n" + errorLesson + "\n")
-//
-//	}
-//
-//	return checkResult
-//}
 
 func getErrorString(courseId string,lessonId string,lessonName string,seq string,errorStatus string,objectKey string) string {
 
@@ -492,52 +425,15 @@ func checkResourceSaveStatus(objectKey string) bool {
 //*********************     网络模块     *************************
 //*********************                 *************************
 //***************************************************************
-func getCourses(token string) []model.Course {
+func getCourses(token string,courseIds []string) []model.Course {
 
-	_,courses := utils.ListWithCourses(model.Request{token,"cine.web",nil})
+	var data = make(map[string]interface{})
 
-	// 获取课程列表
-	clientCourseIds := utils.ClientInputWithMessage("请输入待检查的课程Id，中间用\",\"隔开，点击\"enter\"键结束\n如果要检查全部课件，请直接点击\"endter\"键",'\n')
+	data["course_ids"] = courseIds
 
-	if clientCourseIds == "" {
-		return courses
-	}
+	_,courses := utils.ListWithCheckCourses(model.Request{token,"cine.web",data})
 
-	var targetCourse []model.Course
-
-	courseIds := strings.Split(clientCourseIds,",")
-
-	fmt.Println(courseIds)
-
-	for i := 0;i < len(courses);i++  {
-
-		courseModel := courses[i]
-
-		courseIdsCount := len(courseIds)
-
-		if courseIdsCount <= 0 {
-			break
-		}
-
-		for j := 0;j < len(courseIds) ;j++  {
-
-			courseId := courseIds[j]
-
-			if courseModel.Id == courseId {
-
-				targetCourse = append(targetCourse,courseModel)
-
-				courseIds = append(courseIds[:j],courseIds[j+1:]...)
-
-				break
-			}
-
-		}
-
-	}
-
-	return targetCourse
-
+	return courses
 }
 
 func getLessons(token string, courseId string) []model.CheckLesson {
@@ -549,3 +445,26 @@ func getLessons(token string, courseId string) []model.CheckLesson {
 	return lessons
 }
 
+func getConfigs() (account string,password string,courseIds []string) {
+
+	armConfigs := utils.GetConfArgs(checkConfig)
+
+	fmt.Println(armConfigs)
+
+	account = armConfigs["Account"]
+	password = armConfigs["Password"]
+
+	cids := armConfigs["Course_ids"]
+
+	if cids == "" {
+		return account,password,nil
+	}
+
+	if !strings.Contains(cids,",") {
+		courseIds = append(courseIds, cids)
+	}else {
+		courseIds = strings.Split(cids,",")
+	}
+
+	return account,password,courseIds
+}

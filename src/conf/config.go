@@ -3,6 +3,10 @@ package conf
 //是否开发模式
 const IsDebug = true
 
+// 是否为测试环境，用来判断相应服务器
+// (true为测试服务器apptest.bstcine.com, false为线上正式服务器，www.bstcine.com)
+const IsTestHost = true
+
 const WorkDir = "/Go/Cine/cine.tool/"         //工作空间
 const LogFile = "log/cine_tools.log"          //日志文件
 const ConfFile = "conf/cine_tools.cfg"        //配置文件
@@ -22,4 +26,5 @@ const Course_download_errorLog = "./oss_download/oss_error.txt"            // �
 
 // oss资源检查配置文件路径
 const Course_checkWorkDir = "./oss_checkConfig"                            // 检查oss资源工作目录
+const Course_checkConfig  = "./cine_course_check.cfg"                                 // 检查oss资源配置信息
 const Course_check_log = "./oss_checkConfig/resourceLog.txt"               // 检查oss资源错误文件

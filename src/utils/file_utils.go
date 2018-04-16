@@ -165,9 +165,9 @@ func WriteLines(lines []string, path string) error {
 }
 
 /**
-获取JSON格式的文件信息
+获取文件的基本属性信息，以json形式返回
 */
-func GetJsonFileInfo(url string) (string, error) {
+func GetJsonFileInfo(url string) (json string,err error) {
 	var cmd = "ffprobe -v quiet -print_format json -show_format " + url
 	result, err := RunCMD(cmd)
 	return result, err

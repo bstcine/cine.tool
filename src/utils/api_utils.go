@@ -9,11 +9,12 @@ import (
 	"../model"
 	"../conf"
 	"log"
+	"strings"
 )
 
 func GetBaseUrl(url string) string {
 
-	if conf.IsDebug {
+	if conf.IsTestHost {
 		url = conf.API_BASE_URL_TEST + url
 	} else {
 		url = conf.API_BASE_URL + url
@@ -27,7 +28,11 @@ func CommonPost(url string, request model.Request, res interface{}) {
 
 	log.Println("======== 网络请求中 > body: " + string(jsonBytes))
 
-	resp, err := http.Post(GetBaseUrl(url), "application/json", bytes.NewBuffer(jsonBytes))
+	if !strings.Contains(url,"bstcine.com") {
+		url = GetBaseUrl(url)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBytes))
 	if err != nil {
 		log.Println(err)
 	}
@@ -96,6 +101,17 @@ func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chap
 	return res, rows
 }
 
+func ListWithCheckCourses(request model.Request) (res model.ResList, courses []model.Course) {
+
+	CommonPost(conf.APIURL_Content_Lesson_CheckCourseList,request,&res)
+
+	coursesJson,_ := json.Marshal(res.Result.Rows)
+	json.Unmarshal([]byte(coursesJson),&courses)
+
+	return res, courses
+
+}
+
 //获取待检查的lesson列表
 func ListWithCheckMedias(request model.Request) (res model.ResList, lessons []model.CheckLesson) {
 
@@ -111,7 +127,7 @@ func ListWithCheckMedias(request model.Request) (res model.ResList, lessons []mo
 //更新Lesson检查状态
 func UpdateLessonCheckStatus(request model.Request) (res model.ResCheckList, status bool) {
 
-	CommonPost(conf.APIURL_Content_Lesson_CheckStatus,request,&res)
+	CommonPost(conf.APIURL_Content_Lesson_UpdateCheckStatus,request,&res)
 
 	fmt.Println(res)
 

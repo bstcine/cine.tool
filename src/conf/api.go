@@ -7,5 +7,6 @@ const APIURL_Content_Course_List = "/api/user/content/course/list"              
 
 const APIURL_Content_Article_List = "/api/content/article/list"
 
-const APIURL_Content_Lesson_CheckListWithLessons  = "/api/tool/content/lesson/checkListWithMedia"  //课程待检查的lesson列表
-const APIURL_Content_Lesson_CheckStatus  = "/api/tool/content/lesson/checkStatus"                  //更新Lesson检查状态
+const APIURL_Content_Lesson_CheckCourseList = "/api/tool/content/lesson/checkCourseList"           //待检测课程列表
+const APIURL_Content_Lesson_CheckListWithLessons  = "/api/admin/tool/content/lesson/checkListWithMedia"  //课程待检查的lesson列表
+const APIURL_Content_Lesson_UpdateCheckStatus  = "/api/admin/tool/content/lesson/updateCheckStatus"                  //更新Lesson检查状态
