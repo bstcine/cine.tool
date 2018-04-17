@@ -39,20 +39,24 @@ $ cd cine.tool
       ```
       
 - ### 课程检查
-    - Windows
+  - Window(exe)
       ```
       $ mkdir cine_course_check
       $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
-      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o cine_course_check/cine_course_check.exe cine.tool/src/cine_course_check.go
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o cine_course_check/cine_course_check.exe cine.tool/src/cine_course_check.go
       ```
-    - Mac
+      
+   - Mac
       ```
       $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
       $ go build -o cine_course_check/cine_course_check cine.tool/src/cine_course_check.go
       ```
       
-    - 注意：
+   - 注意
       ```
-      - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
+      - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
       - 课件多媒体资源（音视频,水印图,原图）检查工具
-      ```
+      ```
+      
+
+     
