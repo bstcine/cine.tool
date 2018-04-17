@@ -25,6 +25,6 @@ const Course_download_Config = "./oss_download/oss_download_config.txt"    // �
 const Course_download_errorLog = "./oss_download/oss_error.txt"            // 下载oss错误日志
 
 // oss资源检查配置文件路径
-const Course_checkWorkDir = "./oss_checkConfig"                            // 检查oss资源工作目录
-const Course_checkConfig  = "./cine_course_check.cfg"                                 // 检查oss资源配置信息
-const Course_check_log = "./oss_checkConfig/resourceLog.txt"               // 检查oss资源错误文件
+const Course_checkWorkDir = "/oss_checkConfig"                            // 检查oss资源工作目录
+const Course_checkConfig  = "/cine_course_check.cfg"                                 // 检查oss资源配置信息
+const Course_check_log = "/resourceLog.txt"               // 检查oss资源错误文件

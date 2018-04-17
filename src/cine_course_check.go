@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"os"
 	"net/http"
+	"path/filepath"
 )
 
 var checkConfigFile_debug = "/Users/lidangkun/Desktop/oss_checkConfig"
@@ -54,13 +55,21 @@ func main() {
 		checkWorkDir = checkConfigFile_debug
 		checkConfig = checkConfig_debug
 		checkResourceLog = checkResourceLog_bug
+		utils.CreatDirectory(checkWorkDir)
 	}else {
-		checkWorkDir = conf.Course_checkWorkDir
-		checkConfig = conf.Course_checkConfig
-		checkResourceLog = conf.Course_check_log
-	}
+		dir,err := filepath.Abs(filepath.Dir(os.Args[0]))
 
-	utils.CreatDirectory(checkWorkDir)
+		if err != nil {
+			return
+		}
+
+		dir = strings.Replace(dir,"\\","/",-1)
+
+		fmt.Println(dir)
+		checkWorkDir = dir + conf.Course_checkWorkDir
+		checkConfig = dir + conf.Course_checkConfig
+		checkResourceLog = dir + conf.Course_check_log
+	}
 
 	os.Remove(checkResourceLog)
 
