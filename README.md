@@ -43,13 +43,21 @@
 - ### 课件多媒体资源（音视频,水印图,原图）检查工具-Build
     - Windows
       ```
+      $ cd /Users/userrName/Desktop/CineTool
       $ git clone https://github.com/bstcine/cine.tool.git
-      $ cd cine.tool
-      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/acine_course_check.exe src/cine_course_check.go
+      $ mkdir cine_course_check
+      $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o cine_course_check/cine_course_check.exe cine.tool/src/cine_course_check.go
       ```
     - Mac
       ```
+      $ cd /Users/userrName/Desktop/CineTool
       $ git clone https://github.com/bstcine/cine.tool.git
-      $ cd cine.tool
-      $ go build -o bin/cine_course_check src/cine_course_check.go
+      $ mkdir cine_course_check
+      $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
+      $ go build -o cine_course_check/cine_course_check cine.tool/src/cine_course_check.go
       ```
+    - 注意：
+      ```
+      在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
+      ```
