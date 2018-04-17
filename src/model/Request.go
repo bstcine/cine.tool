@@ -5,3 +5,8 @@ type Request struct {
 	Sitecode string            `json:"sitecode"`
 	Data     map[string]interface{} `json:"data"`
 }
+
+type RequestPermission struct {
+	Login string `json:"login"`
+	Password string `json:"password"`
+}

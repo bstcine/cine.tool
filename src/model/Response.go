@@ -8,6 +8,11 @@ type ResList struct {
 	Result           ResultList `json:"result"`
 }
 
+type ResultPersion struct {
+	Status bool `json:"status"`
+	Token string `json:"token"`
+}
+
 type Res struct {
 	Code             string                 `json:"code"`
 	Code_desc        string                 `json:"code_desc"`

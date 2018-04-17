@@ -68,7 +68,7 @@ func main() {
     checkAccount,checkPassword,checkCourseIds := getConfigs()
 
 	// 登录服务器获取权限
-	checkToken := utils.GetToken(checkAccount,checkPassword)
+	checkToken := utils.GetAdminPermission(checkAccount,checkPassword)
 
 	courses := getCourses(checkToken,checkCourseIds)
 
@@ -82,16 +82,8 @@ func main() {
 		}
 
 		// 获取待检查资源数量
-		var resourceCount = 0
-
-		for _,lessonModel := range lessons {
-
-			resourceCount += len(lessonModel.Medias)
-
-			for _,mediaModel := range lessonModel.Medias {
-				resourceCount += (len(mediaModel.Images)*2)
-			}
-		}
+		var resources = creatCheckResources(courseModel,lessons)
+		var resourceCount = len(resources)
 
 		// 创建一个工作管道，和结果管道
 		var jobs  = make(chan checkResource,resourceCount)
@@ -105,7 +97,7 @@ func main() {
 		}
 
 		// 将工作内容加入管道，开始工作
-		go addJobsWithLessons(jobs,courseModel,lessons)
+		go addJobsWithResources(jobs,resources)
 
 		// 监听工作结果
 		updateData := dealResults(resultChan,courseModel,resourceCount)
@@ -128,27 +120,30 @@ func main() {
 	fmt.Println("工作结束！")
 }
 
-// lessons加入工作队列
-func addJobsWithLessons(jobs chan checkResource, courseModel model.Course,lessons []model.CheckLesson) {
+// 生成工作资源
+func creatCheckResources(courseModel model.Course,lessons []model.CheckLesson) []checkResource {
+
+	var resources []checkResource
 
 	for _,lessonModel := range lessons {
-
-		// 调用Media资源加入工作组
-		addJobsWithMedias(jobs,courseModel,lessonModel,lessonModel.Medias)
-
+		resources = addLessons(resources,courseModel,lessonModel)
 	}
 
-	close(jobs)
+	return  resources
 }
-// media资源加入工作队列
-func addJobsWithMedias(jobs chan checkResource,courseModel model.Course,lessonModel model.CheckLesson, medias []model.CheckMedia){
+// 将lesson资源加入队列中
+func addLessons(checkResources []checkResource,courseModel model.Course,lessonModel model.CheckLesson) (resources []checkResource) {
 
-	for _,mediaModel := range medias  {
+	for _,mediaModel := range lessonModel.Medias {
 
-		// 创建一个media资源
+		if mediaModel.Url == "" {
+			continue
+		}
 
+		// 当mediamodel的检查状态为2时，表示只没有原图，此时不再检查音频
 		if mediaModel.CheckStatus != 2 {
 
+			// 将mediaModel生成资源
 			mediaResource := checkResource{
 				lessonId:lessonModel.Id,
 				lessonName:lessonModel.Name,
@@ -157,58 +152,66 @@ func addJobsWithMedias(jobs chan checkResource,courseModel model.Course,lessonMo
 				mediaSeq:mediaModel.Seq,
 			}
 
-			// 将资源加入工作组
-			jobs <- mediaResource
+			checkResources = append(checkResources,mediaResource)
 		}
 
-		// 调用Image资源加入工作组
-		addJobsWithImages(jobs,courseModel,lessonModel,mediaModel,mediaModel.Images)
-
-	}
-
-}
-// image资源加入工作队列
-func addJobsWithImages(jobs chan checkResource,courseModel model.Course,lessonModel model.CheckLesson, mediaModel model.CheckMedia, images []model.Image){
-
-	for _,imageModel := range images {
-
-		imagePath := imageModel.Url
-
-		// 切断后缀
-		imagePathArr := strings.Split(imagePath,".")
-
-		imagePath = imagePathArr[0] + ".jpg@!style_ori"
-
-		// 判断原始图片是否存在
-		originPath := "kj/" + imagePath
-
-		imageOriginResource := checkResource{
-			lessonId:lessonModel.Id,
-			lessonName:lessonModel.Name,
-			objectKey:originPath,
-			mediaType:1,
-			mediaSeq:mediaModel.Seq,
+		if len(mediaModel.Images) == 0 {
+			continue
 		}
 
-		jobs <- imageOriginResource
+		// 将图片资源加入工作队列
+		for _,imageModel := range mediaModel.Images  {
 
-		if mediaModel.CheckStatus != 2 {
-
-			usePath := "img/" + courseModel.Id + "/" + imagePath
-
-			imageUseResource := checkResource{
-				lessonId:lessonModel.Id,
-				lessonName:lessonModel.Name,
-				objectKey:usePath,
-				mediaType:2,
-				mediaSeq:mediaModel.Seq,
+			if imageModel.Url == "" {
+				continue
 			}
 
-			jobs <- imageUseResource
+			imagePath := imageModel.Url
+			// 切断后缀
+			imagePathArr := strings.Split(imagePath,".")
+			imagePath = imagePathArr[0] + ".jpg@!style_ori"
+
+			if mediaModel.CheckStatus != 2 {
+				// 将线上使用的图加入工作队列
+				usePath := "img/" + courseModel.Id + "/" + imagePath
+
+				imageUseResource := checkResource{
+					lessonId:lessonModel.Id,
+					lessonName:lessonModel.Name,
+					objectKey:usePath,
+					mediaType:2,
+					mediaSeq:mediaModel.Seq,
+				}
+				checkResources = append(checkResources,imageUseResource)
+			}
+
+			// 将原图加入工作队列
+			originPath := "kj/" + imagePath
+			imageOriginResource := checkResource{
+				lessonId:lessonModel.Id,
+				lessonName:lessonModel.Name,
+				objectKey:originPath,
+				mediaType:1,
+				mediaSeq:mediaModel.Seq,
+			}
+			checkResources = append(checkResources,imageOriginResource)
 
 		}
 
 	}
+
+	return checkResources
+}
+// 将检车资源加入工作队列
+func addJobsWithResources(jobs chan checkResource, resources []checkResource){
+
+	for _,resource := range resources {
+
+		jobs <- resource
+
+	}
+
+	close(jobs)
 
 }
 
@@ -313,6 +316,8 @@ func dealResults(results chan checkResult,courseModel model.Course,resourceCount
 
 	}
 
+	fmt.Println("course结束")
+
 	var lessonArray []map[string]interface{}
 
 	// 打包检查结果资源
@@ -337,7 +342,7 @@ func getErrorString(courseId string,lessonId string,lessonName string,seq string
 
 	errorString = errorString + "content_id=" + lessonId + "&seq=" + seq + "&error_type=" + errorStatus + "\">" + lessonName + "</a>"
 
-	errorString = errorString + "\n" + "-----------------------------------------"
+	errorString = errorString + "\n" + "-----------------------------------------" + "<br>"
 
 	return  errorString
 
@@ -453,12 +458,16 @@ func getConfigs() (account string,password string,courseIds []string) {
 
 	account = armConfigs["Account"]
 	password = armConfigs["Password"]
-
 	cids := armConfigs["Course_ids"]
 
 	if cids == "" {
 		return account,password,nil
 	}
+
+	// 清理配置中的空格键 " "
+	account = strings.Replace(account," ","",-1)
+	password = strings.Replace(password," ","",-1)
+	cids = strings.Replace(cids," ","",-1)
 
 	if !strings.Contains(cids,",") {
 		courseIds = append(courseIds, cids)

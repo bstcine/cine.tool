@@ -67,6 +67,30 @@ func CommonGet(url string, res interface{}) {
 	json.Unmarshal(body, &res)
 }
 
+func SigninPermission(request model.RequestPermission) (res model.ResultPersion, token string) {
+
+	jsonBytes, _ := json.Marshal(request)
+
+	log.Println("======== 网络请求中 > body: " + string(jsonBytes))
+
+	resp, err := http.Post(GetBaseUrl(conf.APIURL_Content_Permission_Sigin), "application/json", bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		log.Println(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Println("======== 网络请求成功 > body: " + string(body))
+
+	json.Unmarshal(body, &res)
+
+	return res, res.Token
+}
+
 func Signin(request model.Request) (res model.Res, token string) {
 	CommonPost(conf.APIURL_Auth_Signin, request, &res)
 
@@ -144,7 +168,36 @@ func UpdateLessonCheckStatus(request model.Request) (res model.ResCheckList, sta
  * @param
  * @return token
  */
-func GetToken(account string,password string) string {
+func GetToken(account string,password string) (token string) {
+
+	if account == "" || password == "" {
+		account,password = clientInputUser()
+	}
+
+	var data = make(map[string]interface{})
+
+	data["phone"] = account
+	data["password"] = password
+
+	// 登入服务器
+	_, token = Signin(model.Request{"","cine.web",data})
+
+	return token
+}
+
+func GetAdminPermission(account string,password string) (token string) {
+
+	if account == "" || password == "" {
+		account,password = clientInputUser()
+	}
+
+	// 登入服务器
+	_, token = SigninPermission(model.RequestPermission{account,password})
+
+	return token
+}
+
+func clientInputUser() (account string,password string) {
 
 	for i := 1; i <= 5; i++ {
 
@@ -155,7 +208,7 @@ func GetToken(account string,password string) string {
 
 			if account == "" {
 
-				return ""
+				continue
 			}
 		}
 
@@ -165,35 +218,14 @@ func GetToken(account string,password string) string {
 
 			if password == "" {
 
-				return ""
+				continue
 			}
 		}
 
-		data := make(map[string]interface{})
-		data["phone"] = account
-
-		data["password"] = password
-
-		// 登入服务器
-		_, token := Signin(model.Request{"", "cine.web", data})
-
-		if len(token) <= 0 || token == "" {
-
-			if i == 5 {
-				fmt.Println("您连续输入账户名和密码超出五次，程序结束！\n请认真确定后再重启本程序")
-			} else {
-				fmt.Println("用户名或密码错误，请重新输入")
-
-				account = ""
-				password = ""
-			}
-
-		} else {
-
-			return token
-		}
+		return account,password
 
 	}
 
-	return ""
+	return "",""
+
 }
