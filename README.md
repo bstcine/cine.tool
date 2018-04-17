@@ -79,3 +79,16 @@
       $ cd cine.tool
       $ go build -o bin/app_download_course src/app_download_course.go
       ```
+- ### 课件多媒体资源（音视频,水印图,原图）检查工具-Build
+    - Windows
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/acine_course_check.exe src/cine_course_check.go
+      ```
+    - Mac
+      ```
+      $ git clone https://github.com/bstcine/cine.tool.git
+      $ cd cine.tool
+      $ go build -o bin/cine_course_check src/cine_course_check.go
+      ```
