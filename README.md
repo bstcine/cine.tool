@@ -41,15 +41,15 @@ $ cd cine.tool
 - ### 课程检查
   - Window(exe)
       ```
-      $ mkdir cine_course_check
-      $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
-      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o cine_course_check/cine_course_check.exe cine.tool/src/cine_course_check.go
+      $ mkdir build
+      $ cp cine.tool/assets/cine_course_check.cfg build/cine_course_check.cfg
+      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_check.exe cine.tool/src/cine_course_check.go
       ```
       
    - Mac
       ```
-      $ cp cine.tool/assets/cine_course_check.cfg cine_course_check/cine_course_check.cfg
-      $ go build -o cine_course_check/cine_course_check cine.tool/src/cine_course_check.go
+      $ cp cine.tool/assets/cine_course_check.cfg build/cine_course_check.cfg
+      $ go build -o build/cine_course_check cine.tool/src/cine_course_check.go
       ```
       
    - 注意
