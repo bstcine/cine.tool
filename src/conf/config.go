@@ -1,7 +1,7 @@
 package conf
 
 //是否开发模式
-const IsDebug = true
+const IsDebug = false
 
 // 是否为测试环境，用来判断相应服务器
 // (true为测试服务器apptest.bstcine.com, false为线上正式服务器，www.bstcine.com)
