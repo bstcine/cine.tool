@@ -6,6 +6,12 @@ $ cd cine.tool
 ```
       
 - ## Build
+
+- ### Build_mac_all
+```
+$ ./gbuild_mac.sh
+```
+
 - ### cine_tools
    - Window(exe)
       ```
