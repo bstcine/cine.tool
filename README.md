@@ -10,20 +10,20 @@ $ cd cine.tool
    - Window(exe)
       ```
       $ go get github.com/nfnt/resize
-      $ go github.com/aliyun/aliyun-oss-go-sdk/oss
+      $ go get github.com/aliyun/aliyun-oss-go-sdk/oss
       $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_tools.exe src/cine_tools.go
       ```
    - Mac
       ```
       $ go get github.com/nfnt/resize
-      $ go github.com/aliyun/aliyun-oss-go-sdk/oss
+      $ go get github.com/aliyun/aliyun-oss-go-sdk/oss
       $ go build -o build/cine_tools src/cine_tools.go
       $ ./bin/cine_tools
       ```
    - Linux
      ```
      $ go get github.com/nfnt/resize
-     $ go github.com/aliyun/aliyun-oss-go-sdk/oss
+     $ go get github.com/aliyun/aliyun-oss-go-sdk/oss
      $ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/cine_tools_linux src/cine_tools.go
      $ ./bin/cine_tools
      ```  
