@@ -8,6 +8,7 @@ import (
 	"os"
 	"bufio"
 	"strings"
+	"path/filepath"
 )
 
 /**
@@ -53,8 +54,16 @@ func main() {
 		resourcePath = oss_download_resources_debug
 		configPath = oss_download_configFile_debug
 	}else {
-		resourcePath = oss_download_resources
-		configPath = oss_download_configFile
+		dir,err := filepath.Abs(filepath.Dir(os.Args[0]))
+
+		if err != nil {
+			return
+		}
+
+		dir = strings.Replace(dir,"\\","/",-1)
+
+		resourcePath = dir + oss_download_resources
+		configPath = dir + oss_download_configFile
 	}
 
 	// 创建资源存放目录
