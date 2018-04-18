@@ -145,6 +145,7 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 
 	data := make(map[string]interface{})
 	data["cid"] = courseId
+
 	if len(lessonIds) > 0 {
 
 		if len(lessonIds) > 1 {
@@ -159,6 +160,8 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 
 	}
 	_, rows := utils.ListWithMedias(model.Request{token, "cine.web", data})
+
+	fmt.Println(rows)
 
 	var coursePath = resourcePath + "/" + courseId
 
@@ -218,6 +221,10 @@ func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 
 		var mediaPaths []string
 
+		if media.Url == "" {
+			continue
+		}
+
 		if strings.Contains(media.Url,"/f/") {
 
 			mediaPaths = strings.Split(media.Url,"/f/")
@@ -249,6 +256,10 @@ func downloadLesson(lessonPath string, courseId string, lesson model.Lesson) {
 			var imagePaths []string
 			var isImage bool
 			var pre string
+
+			if imageUrl == "" {
+				continue
+			}
 
 			if strings.Contains(imageUrl,"/f/") {
 
@@ -308,6 +319,11 @@ func downloadOssResource(savePath string, courseId string, path string, isImage 
 		path = pathComponts[0]
 	}
 
+	if strings.Contains(path,"@") {
+		pathComponts := strings.Split(path,"@")
+		path = pathComponts[0]
+	}
+
 	var objectKey string
 
 	if strings.Contains(path,"img/") || strings.Contains(path,"kj/") {
@@ -335,6 +351,8 @@ func downloadOssResource(savePath string, courseId string, path string, isImage 
 		// 将错误信息写入报错日志
 		fmt.Println("下载失败：",savePath,objectKey)
 		addErrorObject(objectKey,savePath)
+	}else {
+		fmt.Println("下载成功：",savePath,objectKey)
 	}
 
 	return downloadStatus
