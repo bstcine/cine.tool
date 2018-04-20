@@ -8,7 +8,7 @@ import (
 	"strings"
 	"strconv"
 	"os"
-	"net/http"
+	//"net/http"
 	"path/filepath"
 )
 
@@ -113,14 +113,14 @@ func main() {
 
 		fmt.Println("获取更新结果：",courseModel.Name,"\n",updateData)
 
-		// 更新该状态
-		_,status := utils.UpdateLessonCheckStatus(model.Request{checkToken,"cine.web",updateData})
-
-		if !status {
-			fmt.Println("更新失败",courseModel.Id,courseModel.Name)
-		}else {
-			fmt.Println("更新成功",courseModel.Id,courseModel.Name)
-		}
+		//// 更新该状态
+		//_,status := utils.UpdateLessonCheckStatus(model.Request{checkToken,"cine.web",updateData})
+		//
+		//if !status {
+		//	fmt.Println("更新失败",courseModel.Id,courseModel.Name)
+		//}else {
+		//	fmt.Println("更新成功",courseModel.Id,courseModel.Name)
+		//}
 
 	}
 
@@ -229,7 +229,7 @@ func startJos(jobs chan checkResource,results chan checkResult) {
 
 	for resource := range jobs {
 
-		isSave := checkResourceSaveStatus(resource.objectKey)
+		isSave := utils.CheckResourceSaveStatus(resource.objectKey)
 
 		result := checkResult{
 			lessonId:resource.lessonId,
@@ -361,7 +361,7 @@ func checkMediaStatus(mediaPath string) bool {
 
 	mediaPath = "kj/" + mediaPath
 
-	return checkResourceSaveStatus(mediaPath)
+	return utils.CheckResourceSaveStatus(mediaPath)
 }
 
 func checkImageStatus(courseId string,imagePath string) int {
@@ -378,11 +378,11 @@ func checkImageStatus(courseId string,imagePath string) int {
 	// 判断原始图片是否存在
 	originPath := "kj/" + imagePath
 
-	originStatus := checkResourceSaveStatus(originPath)
+	originStatus := utils.CheckResourceSaveStatus(originPath)
 
 	usePath := "img/" + courseId + "/" + imagePath
 
-	useStatus := checkResourceSaveStatus(usePath)
+	useStatus := utils.CheckResourceSaveStatus(usePath)
 
 	if !useStatus {
 		 return 3
@@ -395,44 +395,44 @@ func checkImageStatus(courseId string,imagePath string) int {
 	return  1
 }
 
-func checkResourceSaveStatus(objectKey string) bool {
-
-	// 检查图片状态需要检查两次，一次为原图，一次为水印图，两次成功才返回 1
-	requestPath := "http://oss.bstcine.com/" + objectKey
-
-	checkCount = 3
-
-	for checkCount >= 0  {
-
-		checkCount -= 1
-
-		resp,err := http.Head(requestPath)
-
-		if err == nil {
-
-			if resp.StatusCode == 200 {
-
-				length := resp.Header["Content-Length"]
-
-				if len(length) > 0 {
-
-					currentLength,err := strconv.ParseInt(length[0],0,64)
-
-					if err != nil {
-						return  false
-					}
-
-					return (currentLength > 10240)
-				}
-
-			}
-
-		}
-
-	}
-
-	return  false
-}
+//func checkResourceSaveStatus(objectKey string) bool {
+//
+//	// 检查图片状态需要检查两次，一次为原图，一次为水印图，两次成功才返回 1
+//	requestPath := "http://oss.bstcine.com/" + objectKey
+//
+//	checkCount = 3
+//
+//	for checkCount >= 0  {
+//
+//		checkCount -= 1
+//
+//		resp,err := http.Head(requestPath)
+//
+//		if err == nil {
+//
+//			if resp.StatusCode == 200 {
+//
+//				length := resp.Header["Content-Length"]
+//
+//				if len(length) > 0 {
+//
+//					currentLength,err := strconv.ParseInt(length[0],0,64)
+//
+//					if err != nil {
+//						return  false
+//					}
+//
+//					return (currentLength > 10240)
+//				}
+//
+//			}
+//
+//		}
+//
+//	}
+//
+//	return  false
+//}
 
 //***************************************************************
 //*********************                 *************************

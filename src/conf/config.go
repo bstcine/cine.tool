@@ -20,9 +20,9 @@ const API_BASEURL_LOCAL = "http://local.bstcine.com:9000"
 const Media_Host_KJ = "oss.bstcine.com"
 
 // oss 资源下载配置路径
-const Course_downloadWorkDir = "/oss_download"                            // 下载oss工作目录
-const Course_download_Config = "/cine_download_config.cfg"                // 下载oss配置文件
-const Course_download_errorLog = "/cine_download_errorlog.txt"               // 下载oss错误日志
+const Course_downloadWorkDir = "/cine_course_download"                            // 下载oss工作目录
+const Course_download_Config = "/cine_course_download.cfg"                // 下载oss配置文件
+const Course_download_errorLog = "/cine_course_download_errorlog.txt"               // 下载oss错误日志
 
 // oss资源检查配置文件路径
 const Course_checkWorkDir = "/oss_checkConfig"                           // 检查oss资源工作目录

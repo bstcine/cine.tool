@@ -8,6 +8,8 @@ const APIURL_Content_Course_List = "/api/user/content/course/list"              
 const APIURL_Content_Article_List = "/api/content/article/list"
 
 const APIURL_Content_Permission_Sigin  = "/admin/login"
-const APIURL_Content_Lesson_CheckCourseList = "/api/tool/content/lesson/checkCourseList"           //待检测课程列表
-const APIURL_Content_Lesson_CheckListWithLessons  = "/api/admin/tool/content/lesson/checkListWithMedia"  //课程待检查的lesson列表
-const APIURL_Content_Lesson_UpdateCheckStatus  = "/api/admin/tool/content/lesson/updateCheckStatus"                  //更新Lesson检查状态
+const APIURL_Content_Lesson_downloadCourseList = "/api/admin/tool/content/lesson/downloadCourseList" //待下载课程列表
+const APIURL_Content_Lesson_downloadMediaList = "/api/admin/tool/content/lesson/downloadMediaList"   //待下载media列表
+const APIURL_Content_Lesson_CheckCourseList = "/api/tool/content/lesson/checkCourseList"             //待检测课程列表
+const APIURL_Content_Lesson_CheckListWithLessons  = "/api/admin/tool/content/lesson/checkMediaList"  //课程待检查的lesson列表
+const APIURL_Content_Lesson_UpdateCheckStatus  = "/api/admin/tool/content/lesson/updateCheckStatus"  //更新Lesson检查状态

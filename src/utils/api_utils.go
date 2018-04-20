@@ -125,6 +125,49 @@ func ListWithMedias(request model.Request) (res model.ResList, rows []model.Chap
 	return res, rows
 }
 
+func ListWithDownloadCourses(token string,courseIds []string) (res model.ResList,courses []model.Course) {
+
+	var request = model.Request{}
+
+	var data = make(map[string]interface{})
+
+	data["course_ids"] = courseIds
+
+	request.Token = token
+	request.Sitecode = "cine.web"
+	request.Data = data
+
+	CommonPost(conf.APIURL_Content_Lesson_downloadCourseList,request,&res)
+
+	coursesJson,_ := json.Marshal(res.Result.Rows)
+	json.Unmarshal([]byte(coursesJson),&courses)
+
+	return res, courses
+}
+
+func ListWithDownloadMedias(token string,courseId string,lessonIds []string) (res model.ResList, lessons []model.CheckLesson) {
+
+	var request = model.Request{}
+
+	var data = make(map[string]interface{})
+
+	data["cid"] = courseId
+	if len(lessonIds) > 0 {
+		data["lesson_ids"] = lessonIds
+	}
+
+	request.Token = token
+	request.Sitecode = "cine.web"
+	request.Data = data
+
+	CommonPost(conf.APIURL_Content_Lesson_downloadMediaList,request,&res)
+
+	coursesJson,_ := json.Marshal(res.Result.Rows)
+	json.Unmarshal([]byte(coursesJson),&lessons)
+
+	return res, lessons
+}
+
 func ListWithCheckCourses(request model.Request) (res model.ResList, courses []model.Course) {
 
 	CommonPost(conf.APIURL_Content_Lesson_CheckCourseList,request,&res)

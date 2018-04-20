@@ -19,9 +19,11 @@ type Lesson struct {
 }
 
 type CheckLesson struct {
-	Id      string  `json:"lesson_id"`
-	Name    string  `json:"lesson_name"`
-	Medias  []CheckMedia `json:"medias"`
+	ChapterId   string `json:"chapter_id"`
+	ChapterName string `json:"chapter_name"`
+	Id          string  `json:"lesson_id"`
+	Name        string  `json:"lesson_name"`
+	Medias      []CheckMedia `json:"medias"`
 }
 
 type CheckMedia struct {
