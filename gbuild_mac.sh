@@ -19,6 +19,7 @@ echo "cine_course_check.go 编译完成";
 echo "开始编译cine_course_download.go";
 cine_course_download_path="${buildPath}/cine_course_download";
 mkdir ${cine_course_download_path};
+cp ${basePath}/config/cine_course_download.cfg ${cine_course_download_path};
 go build -o ${cine_course_download_path}/cine_course_download ${basePath}/src/cine_course_download.go;
 echo "cine_course_download.go 编译完成"；
 
