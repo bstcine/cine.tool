@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"strings"
 	"path/filepath"
+	"strconv"
 )
 
 /**
@@ -80,7 +81,14 @@ func main() {
 	}
 
 	// 创建配置文件
-	courseIds,lessonIds := readConfig(configPath)
+	courseIds,courseAliasNames,lessonIds := readConfig(configPath)
+
+	if len(courseIds) == 0 || len(courseAliasNames) == 0 || len(courseIds) != len(courseAliasNames) {
+
+		fmt.Println("课程 Id 和别名设置出错",courseIds,courseAliasNames)
+
+		return
+	}
 
 	// 判断配置lesson数组和course数组是否对应
 	if lessonIds != nil && len(courseIds) > 0 && len(courseIds) != len(lessonIds) {
@@ -105,7 +113,7 @@ func main() {
 	}
 
 	// 开始下载课件列表
-	downloadStatus := downloadCourseList(resourcePath,token,courseIds,lessonIds)
+	downloadStatus := downloadCourseList(resourcePath,token,courseIds,courseAliasNames,lessonIds)
 
 	if downloadStatus {
 		fmt.Println("本次课件资源全部下载完成")
@@ -122,11 +130,18 @@ func main() {
 //*****************************************************************
 
 /// 获取下载课件对象列表
-func downloadCourseList(resourcePath string,token string,courseIds []string,lessonIds [][]string) bool {
+func downloadCourseList(resourcePath string,token string,courseIds []string,courseAliasNames []string,lessonIds [][]string) bool {
 
 	_,courseModels := utils.ListWithDownloadCourses(token,courseIds)
 
-	fmt.Println(courseModels)
+	if len(courseModels) != len(courseAliasNames) {
+
+		fmt.Println("网端可下载课件数量与别名不符")
+		fmt.Println("可下载课件如下:\n",courseModels)
+		fmt.Println("别名如下:\n",courseAliasNames)
+
+		return false
+	}
 
 	var downloadStatus bool = true
 
@@ -135,13 +150,16 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,less
 	for i := 0; i < len(courseModels);i++  {
 
 		courseModel := courseModels[i]
+
+		alias := courseAliasNames[i]
+
 		var downloadLessonIds []string
 
 		if len(lessonIds) > 0 {
 			downloadLessonIds = lessonIds[i]
 		}
 
-		courseDownloadStatus := downloadCourse(resourcePath,token,courseModel.Id,downloadLessonIds)
+		courseDownloadStatus := downloadCourse(resourcePath,token,courseModel.Id,alias,downloadLessonIds)
 
 		if courseDownloadStatus == false {
 			downloadStatus = false
@@ -157,7 +175,7 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,less
  * @param courseId 需要下载的课程Id
  * @param lessonIds 指定的lesson了列表
  */
-func downloadCourse(resourcePath string,token string ,courseId string, lessonIds []string) bool {
+func downloadCourse(resourcePath string,token string ,courseId string,alias string, lessonIds []string) bool {
 
 	_, lessons := utils.ListWithDownloadMedias(token,courseId,lessonIds)
 
@@ -166,6 +184,8 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 	var downloadStatus bool = true
 
 	for _,lessonModel := range lessons {
+
+		chapterAlias := strings.Replace(lessonModel.ChapterName,"/","#",-1)
 
 		if strings.Contains(lessonModel.ChapterName,"/") {
 			lessonModel.ChapterName = strings.Replace(lessonModel.ChapterName,"/","_",-1)
@@ -176,11 +196,11 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 		}
 
 		// 生成下载路径
-		downloadPath := coursePath + "/" + lessonModel.ChapterName + "/" + lessonModel.Name
+		downloadPath := coursePath + "/" + lessonModel.ChapterName + "/" + "ls_" + lessonModel.Name
 
 		utils.CreatDirectory(downloadPath)
 
-		lessonDownloadStatus := downloadLesson(downloadPath,courseId,lessonModel)
+		lessonDownloadStatus := downloadLesson(downloadPath,courseId,alias,chapterAlias,lessonModel)
 
 		if lessonDownloadStatus == false {
 			downloadStatus = false
@@ -190,15 +210,21 @@ func downloadCourse(resourcePath string,token string ,courseId string, lessonIds
 	return downloadStatus
 }
 
-func downloadLesson(downloadPath string,courseId string,lessonModel model.CheckLesson) bool {
+func downloadLesson(downloadPath string,courseId string,alias string,chapterAlias string,lessonModel model.CheckLesson) bool {
 
 	for index,mediaModel := range lessonModel.Medias {
 
-		downloadAVMedia(courseId,downloadPath,mediaModel,index)
+		downloadAVMedia(courseId,alias,chapterAlias,downloadPath,mediaModel,index)
 
 		for _,imageModel := range mediaModel.Images {
 
-			downloadImage(courseId,downloadPath,imageModel,index)
+			if len(imageModel.Time) == 1 {
+				imageModel.Time = "00"+imageModel.Time
+			}else if len(imageModel.Time) == 2 {
+				imageModel.Time = "0"+imageModel.Time
+			}
+
+			downloadImage(courseId,alias,chapterAlias,downloadPath,imageModel,index)
 		}
 
 	}
@@ -207,7 +233,7 @@ func downloadLesson(downloadPath string,courseId string,lessonModel model.CheckL
 }
 
 
-func downloadAVMedia(courseId string,lessonPath string,media model.CheckMedia, seq int) bool {
+func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath string,media model.CheckMedia, seq int) bool {
 
 	if !oss_download_av_media {
 		return  true
@@ -223,7 +249,7 @@ func downloadAVMedia(courseId string,lessonPath string,media model.CheckMedia, s
 
 	extension := "." + urlComponents[1]
 
-	savePath := lessonPath + "/" + utils.ChangeInt(seq) + extension
+	savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(seq) + extension
 
 	downloadStatus := downloadOssResource(savePath,objectKey,false)
 
@@ -237,7 +263,7 @@ func downloadAVMedia(courseId string,lessonPath string,media model.CheckMedia, s
 	return downloadStatus
 }
 
-func downloadImage(courseId string,lessonPath string,image model.Image, mediaSeq int) bool {
+func downloadImage(courseId string,alias string,chapterAlias string,lessonPath string,image model.Image, mediaSeq int) bool {
 
 	if !oss_download_use_image && !oss_download_origin_image {
 		return  true
@@ -255,7 +281,7 @@ func downloadImage(courseId string,lessonPath string,image model.Image, mediaSeq
 
 	if oss_download_origin_image {
 
-		savePath := lessonPath + "/" + utils.ChangeInt(mediaSeq) + "_" + image.Time + ".jpg"
+		savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + ".jpg"
 		objectKey := "kj/" + image.Url
 		originStatus := downloadOssResource(savePath,objectKey,true)
 
@@ -270,7 +296,7 @@ func downloadImage(courseId string,lessonPath string,image model.Image, mediaSeq
 
 	if oss_download_use_image {
 
-		savePath := lessonPath + "/" + utils.ChangeInt(mediaSeq) + "_" + image.Time + "_secret.jpg"
+		savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + "_secret.jpg"
 		objectKey := "img/" + courseId + "/" + image.Url
 		secretStatus := downloadOssResource(savePath,objectKey,true)
 
@@ -318,6 +344,21 @@ func downloadOssResource(savePath string, objectKey string, isImage bool) bool {
 
 	return downloadStatus
 
+}
+
+func downloadFileName(number int) string {
+
+	s := strconv.Itoa(number)
+
+	if number >= 100 {
+		return s
+	}
+
+	if number >= 10 {
+		return "0"+s
+	}
+
+	return "00"+s
 }
 
 //*****************************************************************
@@ -628,7 +669,7 @@ func getToken() string {
 //*****************************************************************
 
 /// 读取配置文件
-func readConfig(configPath string) ([]string, [][]string) {
+func readConfig(configPath string) (courseIds []string, courseAlias []string, lessonIds [][]string) {
 
 	// 读取配置文件
 	configMap,err := utils.ReadLines(configPath)
@@ -637,11 +678,8 @@ func readConfig(configPath string) ([]string, [][]string) {
 
 		fmt.Println(err)
 
-		return nil, nil
+		return nil, nil,nil
 	}
-
-	var courseIds []string
-	var lessonIds [][]string
 
 	var configObject = make(map[string] string)
 
@@ -683,27 +721,30 @@ func readConfig(configPath string) ([]string, [][]string) {
 	}
 
 	courseIdString:=configObject["courseIds"]
+	courseAliasNameString:=configObject["aliasNames"]
 	lessonIdString:=configObject["lessonIds"]
 
 	courseIdString = strings.Replace(courseIdString," ","",-1)
 	lessonIdString = strings.Replace(lessonIdString," ","",-1)
+	courseAliasNameString = strings.Replace(courseAliasNameString," ","",-1)
 
 	courseIds = strings.Split(courseIdString,",")
+	courseAlias = strings.Split(courseAliasNameString,",")
 
 	if len(courseIds) <= 0 {
 
 		fmt.Println("没有配置courseId")
 
-		return nil, nil
+		return nil, nil,nil
 	}
 
 	if lessonIdString == "" {
-		return courseIds,nil
+		return courseIds,courseAlias,nil
 	}
 
 	var lessonArrs []string
 
-	lessonArrs = strings.Split(lessonIdString,",")
+	lessonArrs = strings.Split(lessonIdString,"],")
 
 	for _,lessonArr := range lessonArrs {
 
@@ -721,7 +762,6 @@ func readConfig(configPath string) ([]string, [][]string) {
 		lessonIds = append(lessonIds,lessonArray)
 	}
 
-	fmt.Println("配置信息读取成功",courseIds,lessonIds)
-
-	return courseIds, lessonIds
+	fmt.Println(lessonIds)
+	return courseIds,courseAlias,lessonIds
 }
