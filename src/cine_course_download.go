@@ -143,6 +143,21 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 		return false
 	}
 
+	var realCourseModels []model.Course
+
+	for _,courseId := range courseIds {
+
+		for _,courseModel := range courseModels {
+
+			if courseId == courseModel.Id {
+				realCourseModels = append(realCourseModels, courseModel)
+				break
+			}
+		}
+	}
+
+	courseModels = realCourseModels
+
 	var downloadStatus bool = true
 
 	// 已正确获取服务器权限，开始访问列表
@@ -150,6 +165,8 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 	for i := 0; i < len(courseModels);i++  {
 
 		courseModel := courseModels[i]
+
+
 
 		alias := courseAliasNames[i]
 
