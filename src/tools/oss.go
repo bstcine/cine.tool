@@ -323,12 +323,12 @@ func (tools Tools) MigrateCheck() {
 		ossLength := msg.Length
 		ecsLength := msg.EcsLength
 
-		if msg.Error != nil {//OSS 访问出错的资源
+		if msg.Error != nil { //OSS 访问出错的资源
 			migrateCheckOssLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; ERROR: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, msg.Error)
 		} else {
-			if ecsLength == 0 {//ECS 不存在的资源
+			if ecsLength == 0 { //ECS 不存在的资源
 				migrateCheckEcsLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
-			} else if ossLength < ecsLength {//迁移失败的资源
+			} else if ossLength < ecsLength { //迁移失败的资源
 				migrateCheckEquallyLogger.Printf("CourseId: %s ; LessonId: %s ; OSS：%s ; ECS：%s ; OSS-SIZE: %+v; ECS-SIZE: %+v \n", msg.CourseId, msg.LessonId, msg.ObjectKey, msg.MigrateUrl, ossLength, ecsLength)
 			} else if ossLength <= 1500 && msg.ObjectKey != "kj/" && strings.Count(msg.ObjectKey, "/") >= 3 { //小于1.5KB的资源
 				bucket.DeleteObject(msg.ObjectKey)
@@ -361,6 +361,12 @@ func (tools Tools) ImgFormatJPG() {
 			for ossObject := range jobs {
 				objectKey := ossObject.ObjectKey
 
+				if !strings.Contains(objectKey,".") {
+					ossObject.Error = errors.New("非法文件")
+					results <- ossObject
+					continue
+				}
+
 				suf := objectKey[strings.LastIndex(objectKey, "."):]
 
 				if suf != ".mp3" && suf != ".mp4" && suf != ".jpg" {
@@ -374,7 +380,13 @@ func (tools Tools) ImgFormatJPG() {
 							ossObject.Remark = "格式化成功:" + msg
 
 							if isFormatDel { //格式化并删除原文件
-								bucket.DeleteObject(objectKey)
+								_, err = bucket.CopyObject(objectKey, "del/"+objectKey)
+								if err == nil {
+									bucket.DeleteObject(objectKey)
+									ossObject.Remark += " 迁移到 Del 文件夹成功，并删除原文件"
+								} else {
+									ossObject.Remark += " 迁移到 Del 文件夹失败"
+								}
 							}
 						} else {
 							ossObject.Error = errors.New("格式化失败：" + msg)
