@@ -19,7 +19,40 @@ import (
  * @return bool 资源下载结果
  */
 
- var bucket *oss.Bucket
+var bucket *oss.Bucket
+
+//func DownloadFileEndPoint(url string, savePath string) bool {
+//
+//	// 本地是否存在下载文件的临时文件
+//
+//	//"http://oss.bstcine.com/kj/2017/03/21/095005309SHhaBkq.mp3"
+//	//http://oss.bstcine.com/kj/2017/03/21/095015304Skbtk80.jpg@!watermark_cine
+//	req,err := http.Head("http://oss.bstcine.com/kj/2017/03/21/095005309SHhaBkq.mp3")
+//
+//	if err != nil {
+//		print(err)
+//		return false
+//	}
+//
+//	partType := req.Header.Get("Accept-Ranges")
+//
+//	if partType != "bytes" {
+//		return DownloadFile(url,savePath)
+//	}
+//	fmt.Println("可以执行分片下载",partType)
+//	// 执行分片下载
+//	fileLengthStr := req.Header.Get("Content-Length")
+//	fileContent,err := strconv.ParseInt(fileLengthStr,10,0)
+//
+//	if err != nil {
+//		fmt.Println("文件大小获取失败\n",err)
+//		return  false
+//	}
+//
+//	fmt.Println(fileContent)
+//
+//	return true
+//}
 
 func DownloadOssResource(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string) bool {
 
@@ -48,8 +81,6 @@ func DownloadOssResource(endpoint string, accessKeyId string, accessKeySecret st
 		err = bucket.DownloadFile(objectKey,savePath,100*1024,oss.Routines(3),oss.Checkpoint(true,""))
 
 		if err == nil {
-
-			fmt.Println("下载完毕",objectKey)
 
 			return true
 

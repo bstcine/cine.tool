@@ -219,41 +219,39 @@ func PrintDownloadPercent(done chan int64, path string, total int64) {
 /**
 下载文件
  */
-func DownloadFile(url string, outPath string) {
+func DownloadFile(url string, outPath string) bool {
 
 	dirPath := outPath[0:strings.LastIndex(outPath,"/")+1]
 	if _, err := os.Stat(dirPath); err != nil {
 		os.MkdirAll(dirPath, 0777)
 	}
 
-	file := path.Base(url)
+	//file := path.Base(url)
+	//
+	//log.Printf("Downloading file %s from %s\n", file, url)
 
-	log.Printf("Downloading file %s from %s\n", file, url)
-
-	start := time.Now()
+	//start := time.Now()
 
 	out, err := os.Create(outPath)
+
+	defer out.Close()
 
 	if err != nil {
 		fmt.Println(outPath)
 		panic(err)
+		return false
 	}
-
-	defer out.Close()
 
 	headResp, err := http.Head(url)
 
-	if err != nil {
-		panic(err)
-	}
-
 	defer headResp.Body.Close()
 
-	//size, err := strconv.Atoi(headResp.Header.CommonGet("Content-Length"))
-
 	if err != nil {
 		panic(err)
+		return false
 	}
+
+	//size, err := strconv.Atoi(headResp.Header.CommonGet("Content-Length"))
 
 	//done := make(chan int64)
 
@@ -261,16 +259,18 @@ func DownloadFile(url string, outPath string) {
 
 	resp, err := http.Get(url)
 
+	defer resp.Body.Close()
+
 	if err != nil {
 		panic(err)
+		return false
 	}
-
-	defer resp.Body.Close()
 
 	io.Copy(out, resp.Body)
 
 	//done <- n
 
-	elapsed := time.Since(start)
-	log.Printf("Download completed in %s", elapsed)
+	//elapsed := time.Since(start)
+	//log.Printf("Download completed in %s", elapsed)
+	return true
 }

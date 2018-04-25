@@ -45,9 +45,9 @@ var oss_download_bucket = "static-bstcine"
 var oss_download_account string
 var oss_download_password string
 
-var oss_download_origin_image = true
-var oss_download_use_image = true
 var oss_download_av_media = true
+var oss_download_image = true
+var imageStyle = ""
 
 func main() {
 
@@ -98,7 +98,7 @@ func main() {
 		return
 	}
 
-	// 检查是否存在错误日志表
+	//// 检查是否存在错误日志表
 	errorStatus := candownloadErrorLog()
 
 	if errorStatus {
@@ -260,21 +260,26 @@ func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath
 		return  true
 	}
 
-	objectKey := "kj/" + media.Url
-
 	urlComponents := strings.Split(media.Url,".")
 
 	extension := "." + urlComponents[1]
 
 	savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(seq) + extension
 
-	downloadStatus := downloadOssResource(savePath,objectKey,false)
+	objectKey := "kj/" + media.Url
+
+	fmt.Println("开始下载资源:",objectKey)
+
+	downloadStatus := downloadOssResource(savePath,objectKey)
 
 	if !downloadStatus {
+		fmt.Println("下载失败:",objectKey)
 		// 生成错误信息
 		errorMes := savePath + "," + objectKey + "\n"
 
 		utils.AppendStringToFile(errorLogPath,errorMes)
+	}else {
+		fmt.Println("下载完毕:",objectKey)
 	}
 
 	return downloadStatus
@@ -282,8 +287,8 @@ func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath
 
 func downloadImage(courseId string,alias string,chapterAlias string,lessonPath string,image model.Image, mediaSeq int) bool {
 
-	if !oss_download_use_image && !oss_download_origin_image {
-		return  true
+	if !oss_download_image {
+		return true
 	}
 
 	if image.Url == "" {
@@ -294,42 +299,40 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 	imageUrlComponents := strings.Split(image.Url,".")
 	image.Url = imageUrlComponents[0] + ".jpg"
 
-	var downloadStatus = true
+	savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + ".jpg"
 
-	if oss_download_origin_image {
+	if utils.Exists(savePath) {
 
-		savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + ".jpg"
-		objectKey := "kj/" + image.Url
-		originStatus := downloadOssResource(savePath,objectKey,true)
+		fmt.Println("待下载文件已存在:",savePath)
 
-		if !originStatus {
-
-			downloadStatus = false
-
-			errorMes := savePath + "," + objectKey + "\n"
-			utils.AppendStringToFile(errorLogPath,errorMes)
-		}
+		return  true
 	}
 
-	if oss_download_use_image {
+	objectKey := "kj/" + image.Url + imageStyle
+	url := "http://oss.bstcine.com/" + objectKey
 
-		savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + "_secret.jpg"
-		objectKey := "img/" + courseId + "/" + image.Url
-		secretStatus := downloadOssResource(savePath,objectKey,true)
+	fmt.Println("开始下载资源:",objectKey)
 
-		if !secretStatus {
+	if !utils.CheckResourceSaveStatus(objectKey) {
+		fmt.Println("资源不存在:",objectKey)
+		return false
+	}
 
-			downloadStatus = false
+	downloadStatus := utils.DownloadFile(url,savePath)
 
-			errorMes := savePath + "," + objectKey + "\n"
-			utils.AppendStringToFile(errorLogPath,errorMes)
-		}
+	if !downloadStatus {
+
+		fmt.Println("下载失败:",objectKey)
+		errorMes := savePath + "," + objectKey + "\n"
+		utils.AppendStringToFile(errorLogPath,errorMes)
+	}else {
+		fmt.Println("下载完毕:",objectKey)
 	}
 
 	return downloadStatus
 }
 
-func downloadOssResource(savePath string, objectKey string, isImage bool) bool {
+func downloadOssResource(savePath string, objectKey string) bool {
 
 	// 判断是否已经下载过
 	isHadDownload := utils.Exists(savePath)
@@ -339,20 +342,12 @@ func downloadOssResource(savePath string, objectKey string, isImage bool) bool {
 		return true
 	}
 
-	var checkObject string
-
-	if isImage {
-		checkObject = objectKey + "@!style_ori"
-	}else {
-		checkObject = objectKey
-	}
-
 	// 判断资源是否存在
-	isResourceHad := utils.CheckResourceSaveStatus(checkObject)
+	isResourceHad := utils.CheckResourceSaveStatus(objectKey)
 
 	if !isResourceHad {
 
-		fmt.Println("资源不存在",checkObject)
+		fmt.Println("资源不存在:",objectKey)
 
 		return false
 	}
@@ -721,16 +716,16 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 	oss_download_account = configObject["account"]
 	oss_download_password = configObject["password"]
 
-	download_origin_image := configObject["download_origin_image"]
-	download_use_image := configObject["download_use_image"]
+	imageStyle = configObject["style"]
+	download_image := configObject["download_image"]
 	download_av_media := configObject["download_av_media"]
 
-	if download_origin_image == "false" {
-		oss_download_origin_image = false
+	if download_image == "false" {
+		oss_download_image = false
 	}
 
-	if download_use_image == "false" {
-		oss_download_use_image =false
+	if imageStyle == "" {
+		imageStyle = "@!style_ori"
 	}
 
 	if download_av_media == "false" {
