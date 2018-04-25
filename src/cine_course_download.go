@@ -196,7 +196,7 @@ func downloadCourse(resourcePath string,token string ,courseId string,alias stri
 
 	_, lessons := utils.ListWithDownloadMedias(token,courseId,lessonIds)
 
-	var coursePath = resourcePath + "/" + courseId
+	var coursePath = resourcePath + "/" + alias
 
 	var downloadStatus bool = true
 
