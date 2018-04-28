@@ -12,6 +12,86 @@ import (
 	"log"
 )
 
+func GetAllDirectoryNames(dirPath string) []string {
+
+	fileHandler,err := ioutil.ReadDir(dirPath)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var dirNames []string
+	for _,file := range fileHandler {
+		if file.IsDir() {
+			dirNames = append(dirNames,file.Name())
+		}
+	}
+
+	return dirNames
+
+}
+
+/// 获取目录下的所有文件名
+func GetAllFiloeNames(dirPath string) []string{
+
+	fileHandler,err := ioutil.ReadDir(dirPath)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var fileNames []string
+	for _,file := range fileHandler {
+		if file.IsDir() {
+			continue
+		}
+		fileNames = append(fileNames,file.Name())
+	}
+
+	return fileNames
+}
+
+/// 获取目录下的所有mp3文件名
+func GetAllMp3FiloeNames(dirPath string) []string{
+
+	fileHandler,err := ioutil.ReadDir(dirPath)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var fileNames []string
+	for _,file := range fileHandler {
+		if file.IsDir() {
+			continue
+		}
+		fileName := file.Name()
+		if !strings.Contains(fileName,".mp3") {
+			continue
+		}
+		fileNames = append(fileNames,fileName)
+	}
+
+	return fileNames
+}
+
+func ChangeIntToThirdStr(value int) string {
+	s := strconv.Itoa(value)
+
+	if value < 10 {
+
+		s = "00"+s
+
+	}else if value < 100 {
+
+		s = "0"+s
+	}
+
+	return  s
+}
 
 /// 将100以内的int数据转换为string（显示两位）
 func ChangeInt(value int) string {

@@ -264,7 +264,8 @@ func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath
 
 	extension := "." + urlComponents[1]
 
-	savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(seq) + extension
+	// + alias + "_" + chapterAlias + "_"
+	savePath := lessonPath + "/" + downloadFileName(seq) + extension
 
 	objectKey := "kj/" + media.Url
 
@@ -299,7 +300,8 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 	imageUrlComponents := strings.Split(image.Url,".")
 	image.Url = imageUrlComponents[0] + ".jpg"
 
-	savePath := lessonPath + "/" + alias + "_" + chapterAlias + "_" + downloadFileName(mediaSeq) + "_" + image.Time + ".jpg"
+	// + alias + "_" + chapterAlias + "_"
+	savePath := lessonPath + "/" + downloadFileName(mediaSeq) + "_" + image.Time + ".jpg"
 
 	if utils.Exists(savePath) {
 
