@@ -54,28 +54,33 @@ func GetAllFiloeNames(dirPath string) []string{
 }
 
 /// 获取目录下的所有mp3文件名
-func GetAllMp3FiloeNames(dirPath string) []string{
+func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
+
+	hadVideo = false
 
 	fileHandler,err := ioutil.ReadDir(dirPath)
 
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return false,nil
 	}
 
-	var fileNames []string
 	for _,file := range fileHandler {
 		if file.IsDir() {
 			continue
 		}
 		fileName := file.Name()
+
 		if !strings.Contains(fileName,".mp3") {
-			continue
+			if !strings.Contains(fileName,".mp4") {
+				continue
+			}
+			hadVideo = true
 		}
 		fileNames = append(fileNames,fileName)
 	}
 
-	return fileNames
+	return hadVideo,fileNames
 }
 
 func ChangeIntToThirdStr(value int) string {

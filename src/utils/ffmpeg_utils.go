@@ -10,6 +10,20 @@ import (
 	"strings"
 )
 
+/// 将一个mp4视频转换为需要大小和清晰度的MP4
+func ChangeVideoSize(videoPath string, savePath string) string {
+
+	inputLine := " -i " + "\"" + videoPath + "\""
+	vcodeLine := " -r 28 -vcodec libx264 -x264-params \"profile="+conf.FFMPEG_videoProfile+":level=3.0\" -pix_fmt yuv420p -s 1920*1080"
+	outputLine := " -y \"" + savePath + "\""
+
+	line := "ffmpeg" + inputLine + vcodeLine + outputLine
+
+	fmt.Println(line)
+
+	return line
+}
+
 /// 将一组可加入concat的ts文件执行合并为可用视频的命令行,
 /**
  * @param mpegsAtt 扩展名为.ts路径集合
@@ -74,7 +88,12 @@ func CreatAudioToVideoLines(audioPath string, videoPath string,targetPath string
 }
 
 /// 单张图片加单个音频，生成一段视频，帧率默认为1,时长默认与音频相同,需要执行的命令行
-func CreatOneImageAudioLines(imagePath string, audioPath string,targetPath string) string {
+func CreatOneImageAudioLines(imagePath string, audioPath string,targetPath string, defaultFPS bool) string {
+
+	var fps string = "28"
+	if defaultFPS {
+		fps = "1"
+	}
 
 	audioDuration := GetDuration(audioPath)
 
@@ -84,19 +103,25 @@ func CreatOneImageAudioLines(imagePath string, audioPath string,targetPath strin
 	videoWidth := strconv.Itoa(int(conf.FFMPEG_videoWidth))
 	videoHeight := strconv.Itoa(int(conf.FFMPEG_videoHeight))
 
+	rataLine := " -r " + fps
 	inputImageLine := " -i " + "\"" + imagePath + "\""
 	inputAudioLine := " -i " + "\"" + audioPath + "\"" + " -t " + ChangeIntToThirdStr(audioDuration)
 	vcodeLine := " -vcodec libx264 -x264-params \"profile="+conf.FFMPEG_videoProfile+":level=3.0\" -pix_fmt yuv420p"
 	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
 	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
 	outputPath := " -y " + "\"" + targetPath + "\""
-	lines := "ffmpeg -r 1 -f image2 -loop 1" + inputImageLine + inputAudioLine + vcodeLine + vfScaleLine + vfPadLine + outputPath
+	lines := "ffmpeg" + rataLine + " -f image2 -loop 1" + inputImageLine + inputAudioLine + vcodeLine + vfScaleLine + vfPadLine + outputPath
 
 	return lines
 }
 
 /// 单张图片指定时长，生成一段无声的视频,帧率默认为1，需要执行的命令行
-func CreatLines(imagePath string, duration int,targetPath string) string {
+func CreatLines(imagePath string, duration int,targetPath string, defaultFPS bool) string {
+
+	var fps string = "28"
+	if defaultFPS {
+		fps = "1"
+	}
 
 	frameX,frameY := videoImageFrame(imagePath)
 	frameXStr := strconv.Itoa(frameX)
@@ -104,13 +129,14 @@ func CreatLines(imagePath string, duration int,targetPath string) string {
 	videoWidth := strconv.Itoa(int(conf.FFMPEG_videoWidth))
 	videoHeight := strconv.Itoa(int(conf.FFMPEG_videoHeight))
 
+	rataLine := " -r " + fps
 	inputFileLine := " -i " + "\"" + imagePath + "\""
 	vcodeLine := " -vcodec libx264 -x264-params \"profile="+conf.FFMPEG_videoProfile+":level=3.0\" -pix_fmt yuv420p"
 	durationLine := " -t " + strconv.Itoa(duration)
 	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
 	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
 	outputPath := " -y " + "\"" + targetPath + "\""
-	lines := "ffmpeg -r 1 -f image2 -loop 1" + inputFileLine + vcodeLine + durationLine + vfScaleLine + vfPadLine + outputPath
+	lines := "ffmpeg" + rataLine + " -f image2 -loop 1" + inputFileLine + vcodeLine + durationLine + vfScaleLine + vfPadLine + outputPath
 
 	return lines
 }

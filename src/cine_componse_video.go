@@ -13,6 +13,7 @@ import (
 type componseVideo struct {
 	LessonDir string
 	SavePath string
+	HadOriginVideo bool
 	TmpPath string
 	Audios []componseAudio
 }
@@ -30,7 +31,6 @@ type componseImage struct {
 	OriginPath string
 	TmpPath string
 }
-
 
 func main() {
 
@@ -164,6 +164,22 @@ func startComponseVideoModel(videoModel componseVideo){
 
 func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio) (tmpVideoPath string) {
 
+	// 生成临时路径
+	tmpVideoPath = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + ".mp4"
+
+	// 判断这个音频模式是否是个视频
+	if strings.Contains(audioModel.OriginPath,".mp4") {
+
+		fmt.Println("源多媒体为视频文件，开始处理为可用视频")
+		componseLine := utils.ChangeVideoSize(audioModel.OriginPath,tmpVideoPath)
+		_,status := utils.RunCMD(componseLine)
+		if status != nil {
+			tmpVideoPath = ""
+		}
+		fmt.Println("源视频处理完成，已生成临时文件，请勿操作计算机，以免造成误删")
+		return tmpVideoPath
+	}
+
 	// 如果没有图片，则表示文件夹配置异常
 	if len(audioModel.Images) == 0 {
 
@@ -171,15 +187,12 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 		return tmpVideoPath
 	}
 
-	// 生成临时路径
-	tmpVideoPath = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + ".mp4"
-
 	// 如果只有一张图片，则直接合成一个视频
 	if len(audioModel.Images) == 1 {
 
 		fmt.Println("开始处理音频与图片")
 		// 生成合成命令行
-		componseLine := utils.CreatOneImageAudioLines(audioModel.Images[0].OriginPath,audioModel.OriginPath,tmpVideoPath)
+		componseLine := utils.CreatOneImageAudioLines(audioModel.Images[0].OriginPath,audioModel.OriginPath,tmpVideoPath,!videoModel.HadOriginVideo)
 		// 执行命令行
 		_,status := utils.RunCMD(componseLine)
 
@@ -207,7 +220,7 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 		mpegtspATH := audioTmpDir + "/" + utils.ChangeIntToThirdStr(imageModel.Seq) + ".ts"
 
 		fmt.Println("开始处理图片",imageModel.OriginPath)
-		creatVideoLine := utils.CreatLines(imageModel.OriginPath,imageModel.duration,videoPath)
+		creatVideoLine := utils.CreatLines(imageModel.OriginPath,imageModel.duration,videoPath,!videoModel.HadOriginVideo)
 		_,status := utils.RunCMD(creatVideoLine)
 		if status != nil {
 			fmt.Println("图片转换视频失败，本视频合成结束",creatVideoLine)
@@ -258,7 +271,7 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 
 func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componseVideo) {
 
-	allMp3Names := utils.GetAllMp3FiloeNames(dirPath)
+	hadVideo,allMp3Names := utils.GetAllMp3FiloeNames(dirPath)
 
 	if len(allMp3Names) == 0 {
 		return videoModel
@@ -273,17 +286,19 @@ func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componse
 
 	videoModel = componseVideo{
 		LessonDir:dirPath,
+		HadOriginVideo:hadVideo,
 		SavePath:saveDirPath+"/"+lessonName+".mp4",
 		TmpPath:dirPath+"/"+"tmp_cine",
 	}
 
 	var audioModels []componseAudio
 
-	// 生成临时文件夹，用来防止过渡文件
+	// 生成临时文件夹，用来放置过渡文件
 
 	for _,audioName := range allMp3Names {
 
 		audioSeqStr := strings.Replace(audioName,".mp3","",-1)
+		audioSeqStr = strings.Replace(audioSeqStr,".mp4","",-1)
 		audioSeq,_ := strconv.Atoi(audioSeqStr)
 
 		audioModel := componseAudio{
@@ -291,55 +306,58 @@ func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componse
 			OriginPath:dirPath+"/"+audioName,
 		}
 
-		var audioImages []componseImage
+		if !strings.Contains(audioName,".mp4") {
 
-		for _,fileName := range allFileNames {
+			var audioImages []componseImage
 
-			preName := audioSeqStr + "_"
-			if !strings.Contains(fileName,preName) {
-				continue
-			}
+			for _,fileName := range allFileNames {
 
-			fileSeqStr := strings.Replace(fileName,preName,"",-1)
-			fileSeqStr = strings.Replace(fileSeqStr,".jpg","",-1)
-			fileSeq,_ := strconv.Atoi(fileSeqStr)
-
-			imageModel := componseImage{
-				Seq:fileSeq,
-				OriginPath:dirPath+"/"+fileName,
-			}
-
-			if len(audioImages) == 0 {
-
-				audioImages = append(audioImages,imageModel)
-			}else {
-
-				var hadInsert = false
-
-				for i := 0;i < len(audioImages) ;i++  {
-					if audioImages[i].Seq <= imageModel.Seq {
-						continue
-					}
-					// 插入当前位置，并break
-					var preImages []componseImage
-					preImages = append(preImages,audioImages[:i]...)
-
-					lastImages := audioImages[i:]
-
-					preImages = append(preImages,imageModel)
-					audioImages = append(preImages,lastImages...)
-
-					hadInsert = true
-					break
+				preName := audioSeqStr + "_"
+				if !strings.Contains(fileName,preName) {
+					continue
 				}
-				if !hadInsert {
+
+				fileSeqStr := strings.Replace(fileName,preName,"",-1)
+				fileSeqStr = strings.Replace(fileSeqStr,".jpg","",-1)
+				fileSeq,_ := strconv.Atoi(fileSeqStr)
+
+				imageModel := componseImage{
+					Seq:fileSeq,
+					OriginPath:dirPath+"/"+fileName,
+				}
+
+				if len(audioImages) == 0 {
+
 					audioImages = append(audioImages,imageModel)
+				}else {
+
+					var hadInsert = false
+
+					for i := 0;i < len(audioImages) ;i++  {
+						if audioImages[i].Seq <= imageModel.Seq {
+							continue
+						}
+						// 插入当前位置，并break
+						var preImages []componseImage
+						preImages = append(preImages,audioImages[:i]...)
+
+						lastImages := audioImages[i:]
+
+						preImages = append(preImages,imageModel)
+						audioImages = append(preImages,lastImages...)
+
+						hadInsert = true
+						break
+					}
+					if !hadInsert {
+						audioImages = append(audioImages,imageModel)
+					}
 				}
+
 			}
 
+			audioModel.Images = audioImages
 		}
-
-		audioModel.Images = audioImages
 
 		if len(audioModels) == 0 {
 			audioModels = append(audioModels,audioModel)
