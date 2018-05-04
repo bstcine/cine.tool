@@ -85,21 +85,9 @@ $ ./gbuild_mac.sh
      $ go build -o build/cine_media_synthesizer src/cine_media_synthesizer.go
     ```
      
-  - 注意
+  - 注意：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
     ```
-    - 0.如果使用了 ./gbuild_mac.sh脚本,cine_media_synthesizer在build/cine_media_synthesizer目录下，
-        如果使用 音视频合成->Mac 中的方法，则直接在build中
-    - 1.在工具在使用时，需要与待检查目录平级放置，如 courseList/the cat in the hat/chapter1/ls_lesson1/... ,
-        courseList/cine_media_synthesier
-    - 2.待检查目录可是是course目录，chapter目录，lesson目录，合成工具平级放置，
-        例如courselist/cine_media_synthesizer, courselist/the cat in the hat/cine_media_synthesizer,
-        courselist/the cat in the hat/chapter1/cine_media_synthesizer
-    - 3.放置音视频及图片的目名称录必须以 "ls_" 开头，如ls_lesson1,ls_introduction等
-    - 4.音视频资源必须为mp3 和mp4 资源，扩展名为 ",mp3", ".mp4", 必须要以三位整数顺序命名，
-        如000.mp3, 001.mp3, 002.mp4, 003.mp3, 004.mp4 等
-    - 5.图片资源必须为jpg资源，扩展名为 ".jpg"，以对应音频资源同名，加上三位整数表示出现的时间点，
-        如 000_000.jpg, 000_150.jpg, 000_155.jpg, 000_341.jpg,001_000.jpg,003_000.jpg等
-    - 6.点击工具启动后，工具会自动检测所有平级目录及其下级目录，获取所有 "ls_" 开头的目录作为合成源
-        检测成功后，工具会自动创建一个平级的MP4/目录,逐级放置合成后的视频
-    - 7.如果参与合成的多媒体源文件包含一个mp4文件，则输出 mp4 文件的帧率为28，否则帧率为1
+    - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/config,
+        /build/cine_media_synthesizer/cine_media_synthesizer, 三个文件拷贝到同一个目录下。
+    - 2.点击执行 cine_course_download，课件下载成功后，点击执行cine_media_synthesizer 即可。
     ```
