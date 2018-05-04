@@ -37,11 +37,11 @@ mkdir ${cine_download_word_path};
 go build -o ${cine_download_word_path}/app_download_word ${basePath}/src/app_download_word.go;
 echo "app_download_word.go 编译完成";
 
-# 编译cine_componse_video.go
-echo "开始编译cine_componse_video.go";
-cine_componse_video_path="${buildPath}/cine_componse_video";
-mkdir ${cine_componse_video_path};
-go build -o ${cine_componse_video_path}/cine_componse_video ${basePath}/src/cine_componse_video.go;
-echo "cine_componse_video.go 编译完成"；
+# 编译cine_media_synthesizer.go
+echo "开始编译cine_media_synthesizer.go";
+cine_media_synthesizer_path="${buildPath}/cine_media_synthesizer";
+mkdir ${cine_media_synthesizer_path};
+go build -o ${cine_media_synthesizer_path}/cine_media_synthesizer ${basePath}/src/cine_media_synthesizer.go;
+echo "cine_media_synthesizer.go 编译完成"；
 
 
