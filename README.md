@@ -71,10 +71,12 @@ $ ./gbuild_mac.sh
   ```
   如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤，请看注意事项
   ```
+  - #### 构建
   - Window(exe)
     ```
      $ ./gpm.sh
      $ mkdir build
+     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer.cfg
      $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_media_synthesizer.exe src/cine_media_synthesizer.go
     ```
 
@@ -82,10 +84,11 @@ $ ./gbuild_mac.sh
     ```
      $ ./gpm.sh
      $ mkdir build
+     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer.cfg
      $ go build -o build/cine_media_synthesizer src/cine_media_synthesizer.go
     ```
      
-  - 注意：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
+  - 使用：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
     ```
     - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/config,
         /build/cine_media_synthesizer/cine_media_synthesizer, 三个文件拷贝到同一个目录下。

@@ -41,6 +41,7 @@ echo "app_download_word.go 编译完成";
 echo "开始编译cine_media_synthesizer.go";
 cine_media_synthesizer_path="${buildPath}/cine_media_synthesizer";
 mkdir ${cine_media_synthesizer_path};
+cp ${basePath}/config/cine_media_synthesizer.cfg ${cine_media_synthesizer_path};
 go build -o ${cine_media_synthesizer_path}/cine_media_synthesizer ${basePath}/src/cine_media_synthesizer.go;
 echo "cine_media_synthesizer.go 编译完成"；
 

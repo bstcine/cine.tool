@@ -28,11 +28,3 @@ const Course_download_errorLog = "/cine_course_download_errorlog.txt"           
 const Course_checkWorkDir = "/oss_checkConfig"                           // 检查oss资源工作目录
 const Course_checkConfig  = "/cine_course_check.cfg"                     // 检查oss资源配置信息
 const Course_check_log = "/cine_course_errorlog.txt"                              // 检查oss资源错误文件
-
-/// 命令行合成视频配置参数
-const FFMPEG_videoSize = "1920*1080"
-const FFMPEG_videoWidth float64 = 1920
-const FFMPEG_videoHeight float64 = 1080
-const FFMPEG_videoScale = FFMPEG_videoWidth / FFMPEG_videoHeight
-
-const FFMPEG_videoProfile = "baseline"
