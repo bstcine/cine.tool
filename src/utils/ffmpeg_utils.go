@@ -184,7 +184,7 @@ func CreatMp4WithMpegts(avPath string, savePath string, mediaModel model.MediaCo
 
 	vcodeLine := " -vcodec libx264 -x264-params \"profile="+mediaModel.Profile+":level=" + mediaModel.Level + "\" -pix_fmt " + mediaModel.Pix
 
-	acodecLine := " -acodec copy"
+	acodecLine := " -acodec aac"
 
 	maxPacketLine := " -max_muxing_queue_size 9999"
 
