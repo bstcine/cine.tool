@@ -56,8 +56,6 @@ func main() {
 
 	mediaSynthesizerConfig = componse_workdir + "/cine_media_synthesizer.cfg"
 
-	componse_workdir = "/Users/lidangkun/Desktop/oss_download/戴帽子的猫"
-
 	// 读取配置参数
 	readResult := readMediaSynthesuzerConfig(mediaSynthesizerConfig)
 
