@@ -69,6 +69,12 @@ func CreatAudioMpegtsWithMP3(audioPath string, savePath string) bool {
 }
 
 /// 3.视频文件提取视频源ts文件
+/**
+ @param videoPath 待提取的视频文件路径
+ @param savePath 提取出的视频源路径
+ @param mediaModel 待提取视频参数
+ @return 提取结果
+ */
 func CreatVideoMpegtsWithMP4(videoPath string, savePath string, mediaModel model.MediaConfig) bool {
 
 	frameX,frameY := videoMP4Frame(videoPath,int(mediaModel.Width),int(mediaModel.Height))
@@ -91,6 +97,11 @@ func CreatVideoMpegtsWithMP4(videoPath string, savePath string, mediaModel model
 }
 
 /// 3.视频文件提取音频源ts文件
+/**
+ @param videoPath 待提取的视频文件路径
+ @param savePath 提取后的音频源路径
+ @return 提取结果
+ */
 func CreatAudioMpegtsWithMP4(videoPath string, savePath string) bool {
 
 	inputFileLine := " -i " + "\"" + videoPath + "\""
@@ -107,6 +118,11 @@ func CreatAudioMpegtsWithMP4(videoPath string, savePath string) bool {
 }
 
 /// 4.将一组ts文件合成为一个ts文件
+/**
+ @param mepgtsArr 待合成的源文件路径集合
+ @param targetPath 合成后的资源文件路径
+ @return 合成结果
+ */
 func ComponseMpegts(mpegtsArr []string,targetPath string) bool {
 
 	if len(mpegtsArr) <= 1 {
@@ -134,6 +150,12 @@ func ComponseMpegts(mpegtsArr []string,targetPath string) bool {
 }
 
 /// 5.将一个视频源和一个音频源合成一个包含视频与音频的ts文件
+/**
+ @param videoPath 视频源路径
+ @param audioPath 音频源路径
+ @param savePath 合成后的ts文件路径
+ @return 合成结果
+ */
 func CreatMpegtsWithAudioAndVideo(videoPath string ,audioPath string, savePath string) bool {
 
 	videoLine := " -i " + "\"" + videoPath + "\""
@@ -150,6 +172,12 @@ func CreatMpegtsWithAudioAndVideo(videoPath string ,audioPath string, savePath s
 }
 
 /// 6.将一个包含音频源和视频源的ts文件转换为mp4文件
+/**
+ @param avPath 包含音频源和视频源的ts文件路径
+ @param savePath 转换后的mp4文件路径
+ @param mediaModel 转换后的mp4资源配置参数信息
+ @return 转码的结果
+ */
 func CreatMp4WithMpegts(avPath string, savePath string, mediaModel model.MediaConfig) bool {
 
 	inputLine := " -i " + "\"" + avPath + "\""
@@ -170,122 +198,14 @@ func CreatMp4WithMpegts(avPath string, savePath string, mediaModel model.MediaCo
 	return err == nil
 }
 
-///// 4.单张图片加单个音频，生成一段视频，帧率默认为1,时长默认与音频相同,需要执行的命令行
-//func CreatOneImageAudioLines(imagePath string, audioPath string,targetPath string, defaultFPS bool, mediaModel model.MediaConfig) string {
-//
-//	var rate = mediaModel.Rate
-//
-//	if !defaultFPS && rate == 1 {
-//		rate = 25
-//	}
-//
-//	audioDuration := GetDuration(audioPath)
-//
-//	frameX,frameY := videoImageFrame(imagePath,int(mediaModel.Width),int(mediaModel.Height))
-//	frameXStr := strconv.Itoa(frameX)
-//	frameYStr := strconv.Itoa(frameY)
-//	videoWidth := strconv.Itoa(int(mediaModel.Width))
-//	videoHeight := strconv.Itoa(int(mediaModel.Height))
-//
-//	rataLine := " -r " + strconv.Itoa(rate)
-//	inputImageLine := " -i " + "\"" + imagePath + "\""
-//	inputAudioLine := " -i " + "\"" + audioPath + "\"" + " -t " + strconv.Itoa(audioDuration)
-//	vcodeLine := " -vcodec libx264 -x264-params \"profile="+mediaModel.Profile+":level=" + mediaModel.Level + "\" -pix_fmt " + mediaModel.Pix
-//	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
-//	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
-//	outputPath := " -y " + "\"" + targetPath + "\""
-//	lines := "ffmpeg" + rataLine + " -f image2 -loop 1" + inputImageLine + inputAudioLine + vcodeLine + vfScaleLine + vfPadLine + outputPath
-//
-//	return lines
-//}
-//
-///// 将一个mp4视频转换为需要大小和清晰度的MP4
-//func ChangeVideoSize(videoPath string, savePath string, mediaModel model.MediaConfig) string {
-//
-//	var rate = mediaModel.Rate
-//	if rate == 1 {
-//		rate = 25
-//	}
-//
-//	inputLine := " -i " + "\"" + videoPath + "\""
-//	rateLine := " -r " + strconv.Itoa(rate)
-//	paramsLine := " -x264-params \"profile=" + mediaModel.Profile + ":level=" + mediaModel.Level + "\""
-//	pixLine := " -pix_fmt " + mediaModel.Pix + " -s " + mediaModel.Size
-//	vcodeLine := " -vcodec libx264 " + paramsLine + pixLine
-//	outputLine := " -y \"" + savePath + "\""
-//
-//	line := "ffmpeg" + inputLine + rateLine + vcodeLine + outputLine
-//
-//	fmt.Println(line)
-//
-//	return line
-//}
-//
-///// 将一组可加入concat的ts文件执行合并为可用视频的命令行,
-///**
-// * @param mpegsAtt 扩展名为.ts路径集合
-// * @param targetPath 保存路径
-// * @param verbStr 忽略参数，目前仅可以写作 "-an","-vn"两种
-// */
-//func CreatComponseMpegtsLines(mpegtsArr []string,targetPath string, verbStr string) string {
-//
-//	if len(mpegtsArr) <= 1 {
-//		fmt.Println("待合并文件不超过一个，不需要执行合并操作")
-//		return  ""
-//	}
-//
-//	var mpegtsConcat = ""
-//	for _,mpeg := range mpegtsArr {
-//
-//		if mpegtsConcat == "" {
-//			mpegtsConcat = "concat:"+mpeg
-//		}else {
-//			mpegtsConcat = mpegtsConcat + "|" + mpeg
-//		}
-//	}
-//
-//	inputFileLine := " -i " + "\"" + mpegtsConcat + "\""
-//	vcodeLine := " -c copy -absf aac_adtstoasc" + " " + verbStr
-//	lines := "ffmpeg" + inputFileLine + vcodeLine + " -y " + "\"" + targetPath + "\""
-//
-//	fmt.Println(targetPath)
-//	fmt.Println(lines)
-//	return lines
-//}
-//
-///// 将一个视频转换为可加入concat的合并文件.ts
-//func CreatVideoToMpegtsLines(videoPath string,targetPath string) string {
-//
-//	// 判断targetPath是否为.ts
-//	if !strings.Contains(targetPath,".ts") {
-//		fmt.Println("转换后的文件必须以.ts为扩展名")
-//		return ""
-//	}
-//	//
-//	inputVideoLine := " -i " + "\"" + videoPath + "\""
-//
-//	vcodeLine := " -c copy -bsf:v h264_mp4toannexb -f mpegts"
-//	outputLine := " -y " + "\"" + targetPath + "\""
-//
-//	lines := "ffmpeg" + inputVideoLine + vcodeLine + outputLine
-//
-//	return  lines
-//}
-//
-///// 将一段音频合成到视频中的命令行
-//func CreatAudioToVideoLines(audioPath string, videoPath string,targetPath string,mediaModel model.MediaConfig) string {
-//
-//	inputVideoLine := " -i " + "\"" + videoPath + "\""
-//	inputAudioLine := " -i " + "\"" + audioPath + "\""
-//	paramsLine := " -x264-params \"profile=" + mediaModel.Profile + ":level=" + mediaModel.Level + "\" -pix_fmt " + mediaModel.Pix
-//	vcodeLine := " -vcodec libx264"
-//	outputLine := " -y " + "\"" + targetPath + "\""
-//	lines := "ffmpeg" + inputAudioLine + inputVideoLine + vcodeLine + paramsLine + outputLine
-//
-//	return lines
-//}
-
 /// 获取指定视频在画布中的 x,y 值
+/**
+ @param mp4Path 原视频文件路径
+ @param width 画布的宽度
+ @param height 画布的高度
+ @return videoX 原视频在画布中的x坐标
+ @return videoY 原视频在画布中的y坐标
+ */
 func videoMP4Frame(mp4Path string, width int, height int) (videoX int,videoY int) {
 
 	originWidth,originHeight := GetVideoSize(mp4Path)
@@ -310,6 +230,13 @@ func videoMP4Frame(mp4Path string, width int, height int) (videoX int,videoY int
 }
 
 /// 获取指定图片的在视频画布中的 x，y 值
+/**
+ @param imagePath 原图片文件路径
+ @param width 画布的宽度
+ @param height 画布的高度
+ @return videoX 原图片在画布中x坐标
+ @return videoY 原图片在画布中y坐标
+ */
 func videoImageFrame(imagePath string, width int, height int) (videoX int,videoY int) {
 
 	originWidth,originHeight := GetImageSize(imagePath)
@@ -333,7 +260,12 @@ func videoImageFrame(imagePath string, width int, height int) (videoX int,videoY
 	return videoX,videoY
 }
 
-/// 获取音频尺寸
+/// 获取视频尺寸
+/**
+ @parma videoPath 视频路径
+ @return width 视频宽度
+ @return height 视频高度
+ */
 func GetVideoSize(videoPath string) (width int,height int) {
 
 	videoStreams,err := GetJsonFileIndoVideo(videoPath)
@@ -350,6 +282,11 @@ func GetVideoSize(videoPath string) (width int,height int) {
 }
 
 /// 获取图片尺寸
+/**
+ @param imagePath 图片路径
+ @return width 图片宽度
+ @return height 图片高度
+ */
 func GetImageSize(imagePath string) (width int,height int) {
 
 	file,err := os.Open(imagePath)
@@ -367,6 +304,12 @@ func GetImageSize(imagePath string) (width int,height int) {
 	return cof.Width,cof.Height
 }
 
+/// 判断两个资源文件的时长是否相等（上下偏差不超过1秒）
+/**
+ @param firstPath 第一个多媒体资源的路径
+ @param secondPath 第二个多媒体资源路径
+ @return 比较的结果
+ */
 func JudgeDurationEqual(firstPath string, secondPath string) bool {
 
 	firstDuration := GetDuration(firstPath)
@@ -384,6 +327,10 @@ func JudgeDurationEqual(firstPath string, secondPath string) bool {
 }
 
 /// 获取音频时长
+/**
+ @param audioPath 音频路径
+ @return 音频时长
+ */
 func GetDuration(audioPath string) int {
 
 	res,err := GetJsonFileInfo(audioPath)
