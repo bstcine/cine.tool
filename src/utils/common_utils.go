@@ -12,6 +12,21 @@ import (
 	"log"
 )
 
+/// 清理字典中的所有值的指定字符（如空格键，','等）
+func ClearDictionaryChar(dict map[string]string, char string){
+
+	for key,value := range dict {
+
+		if !strings.Contains(value,char) {
+			continue
+		}
+
+		value = strings.Replace(value,char,"",-1)
+		dict[key] = value
+	}
+}
+
+/// 获取目录下的所有目录名称
 func GetAllDirectoryNames(dirPath string) []string {
 
 	fileHandler,err := ioutil.ReadDir(dirPath)
@@ -81,6 +96,15 @@ func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
 	}
 
 	return hadVideo,fileNames
+}
+
+/// 判断一个字符串是否为int
+func JudgeIsInt(judgeStr string) (int, bool) {
+	value,err := strconv.ParseInt(judgeStr,0,32)
+	if err != nil {
+		return 0,false
+	}
+	return int(value),true
 }
 
 func ChangeIntToThirdStr(value int) string {

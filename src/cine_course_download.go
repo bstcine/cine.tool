@@ -686,32 +686,34 @@ func getToken() string {
 func readConfig(configPath string) (courseIds []string, courseAlias []string, lessonIds [][]string) {
 
 	// 读取配置文件
-	configMap,err := utils.ReadLines(configPath)
+	configMap := utils.GetConfArgs(configPath)
 
-	if err != nil {
+	if configMap == nil {
 
-		fmt.Println(err)
+		fmt.Println("没有配置文件")
 
 		return nil, nil,nil
 	}
 
-	var configObject = make(map[string] string)
+	// 清理空格键
+	utils.ClearDictionaryChar(configMap," ")
+	var configObject = configMap
 
-	for _,configLine := range configMap {
-
-		var lineValues = strings.Split(configLine,"=")
-
-		if len(lineValues) > 1 {
-
-			configObject[lineValues[0]] = lineValues[1]
-
-		}else {
-
-			configObject[lineValues[0]] = ""
-
-		}
-
-	}
+	//for _,configLine := range configMap {
+	//
+	//	var lineValues = strings.Split(configLine,"=")
+	//
+	//	if len(lineValues) > 1 {
+	//
+	//		configObject[lineValues[0]] = lineValues[1]
+	//
+	//	}else {
+	//
+	//		configObject[lineValues[0]] = ""
+	//
+	//	}
+	//
+	//}
 
 	oss_download_accessKeyId = configObject["AccessKeyId"]
 	oss_download_accessKeySecret = configObject["AccessKeySecret"]

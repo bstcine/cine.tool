@@ -13,6 +13,7 @@ import (
 	"strings"
 	"bufio"
 	"bytes"
+	"encoding/json"
 )
 
 /// 往文件中追加文字
@@ -60,6 +61,22 @@ func CreatDirectory(path string) bool {
 	return false
 }
 
+/*
+ 文件是否完好
+ */
+func IsComplete(filePath string) bool {
+	path.IsAbs(filePath)
+
+	fileInfo,err := os.Stat(filePath)
+
+	if err != nil {
+		return false
+	}
+
+	fmt.Println(fileInfo)
+
+	return true
+}
 /**
 文件是否存在
 */
@@ -171,6 +188,28 @@ func GetJsonFileInfo(url string) (json string,err error) {
 	var cmd = "ffprobe -v quiet -print_format json -show_format " + "\"" + url + "\""
 	result, err := RunCMD(cmd)
 	return result, err
+}
+
+/**
+ 获取文件的视频信息
+ */
+func GetJsonFileIndoVideo(url string) (map[string]interface{}, error) {
+
+	var cmd= "ffprobe \"" + url + "\" -print_format json -show_streams -select_streams v -hide_banner -v quiet"
+	result, err := RunCMD(cmd)
+	if err != nil {
+		return nil,err
+	}
+
+	var jsonInterface = make(map[string][]map[string]interface{})
+
+	err = json.Unmarshal([]byte(result),&jsonInterface)
+
+	if err != nil {
+		return nil,err
+	}
+
+	return jsonInterface["streams"][0],nil
 }
 
 /**

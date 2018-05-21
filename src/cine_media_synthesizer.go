@@ -8,10 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"./conf"
+	"./model"
 )
 
 type componseVideo struct {
 	LessonDir string
+	DirName string
 	SavePath string
 	HadOriginVideo bool
 	TmpPath string
@@ -32,9 +34,12 @@ type componseImage struct {
 	TmpPath string
 }
 
+var mediaConfgiModel model.MediaConfig
+
 func main() {
 
 	var componse_workdir = ""
+	var mediaSynthesizerConfig string
 
 	if conf.IsDebug {
 		componse_workdir = "/Users/lidangkun/Desktop/oss_download"
@@ -49,10 +54,21 @@ func main() {
 		componse_workdir = strings.Replace(dir,"\\","/",-1)
 	}
 
-	fmt.Println(componse_workdir)
+	mediaSynthesizerConfig = componse_workdir + "/cine_media_synthesizer.cfg"
+
+	componse_workdir = "/Users/lidangkun/Desktop/oss_download/戴帽子的猫"
+
+	// 读取配置参数
+	readResult := readMediaSynthesuzerConfig(mediaSynthesizerConfig)
+
+	if !readResult {
+		return
+	}
+
 	// 生成保存文件夹MP4
 	savePath := componse_workdir + "/MP4"
 
+	// 处理工作目录
 	dealDirectory(componse_workdir,savePath)
 }
 
@@ -62,9 +78,7 @@ func dealDirectory(dirPath string,savePath string) {
 	dirComponents := strings.Split(dirPath,"/")
 	dirName := dirComponents[len(dirComponents)-1]
 	if strings.Contains(dirName,"ls_") {
-		fmt.Println("获取lesson目录，开始读取视频及图片",dirPath)
 		videoModel := dealLessonDirectory(dirPath,savePath)
-		fmt.Println("lesson目录读取成功，开始处理文件",dirPath)
 		startComponseVideoModel(videoModel)
 		fmt.Println("lesson目录处理结束",dirPath)
 	}else {
@@ -78,130 +92,262 @@ func dealDirectory(dirPath string,savePath string) {
 
 		for _,dirName := range dirNames {
 
+			if dirName == "MP4" {
+				continue
+			}
 			dealDirectory(dirPath+"/"+dirName,savePath+"/"+dirName)
 		}
 	}
 }
 
-func startComponseVideoModel(videoModel componseVideo){
+/// 开始合成video模型
+/**
+ @param videomodel 合成视频模型
+ */
+func startComponseVideoModel(videoModel componseVideo) bool {
+
+	var saveSuffix string
+	if mediaConfgiModel.IsTs {
+		saveSuffix = ".ts"
+	}else {
+		saveSuffix = ".mp4"
+	}
+
+	componsePath := videoModel.SavePath + "/" + videoModel.DirName + saveSuffix
 
 	// 判断是否已存在合成视频
-	if utils.Exists(videoModel.SavePath) {
-		fmt.Println("该视频已存在，不需要合成",videoModel.SavePath)
-		return
+	if mediaConfgiModel.UseOldFile && utils.Exists(componsePath) {
+
+		fmt.Println("该视频已存在，不需要合成", componsePath)
+		return true
 	}
 
+	// 判断源文件是否存在
 	if len(videoModel.Audios) == 0 {
 		fmt.Println("该目录下没有需要合成的音频")
-		return
+		return true
 	}
 
-	// 创建tmpDirctory
+	// 创建tmpDirctory，保存临时合成文件
 	if !utils.Exists(videoModel.TmpPath) {
 		utils.CreatDirectory(videoModel.TmpPath)
 	}
 
+	fmt.Println("开始处理目录: ", videoModel.LessonDir)
+
+	// 生成临时文件路径
+	tmpAVPath := videoModel.TmpPath + "/" + videoModel.DirName + ".ts"
+	tmpPath := videoModel.TmpPath + "/" + videoModel.DirName + ".mp4"
+	saveAVPath := videoModel.SavePath + "/" + videoModel.DirName + ".ts"
+	savePath := videoModel.SavePath + "/" + videoModel.DirName + ".mp4"
+
+	// 如果只有一个音频，则直接采用一个合成命令行
 	if len(videoModel.Audios) == 1 {
 
 		// 只有一个音频组
-		tmpPath := startComponseAudioToVideo(videoModel,videoModel.Audios[0])
+		tmpVideoPath, tmpAudioPath := startComponseAudioToVideo(videoModel, videoModel.Audios[0])
+
+		// 将视频源和音频源合成为视频
+		fmt.Println("音频源与视频源准备完成，开始合并完成...")
+
+		isSuc := utils.CreatMpegtsWithAudioAndVideo(tmpVideoPath, tmpAudioPath, tmpAVPath)
+
+		if !isSuc {
+			fmt.Println("源数据合并失败")
+			return false
+		}
+
+		if mediaConfgiModel.IsTs {
+
+			fmt.Println("源数据合成完毕!")
+			err := os.Rename(tmpAVPath,saveAVPath)
+
+			if err != nil {
+				return false
+			}
+
+			if !mediaConfgiModel.SaveTmp {
+				os.RemoveAll(videoModel.TmpPath)
+			}
+			return true
+		}
+		fmt.Println("源数据合成完毕, 开始转码...")
+
+		isSuc = utils.CreatMp4WithMpegts(tmpAVPath, tmpPath, mediaConfgiModel)
+
+		if !isSuc {
+			fmt.Println("转码失败！")
+			return false
+		}
 
 		// 拷贝视频到保存位置
-		fmt.Println(tmpPath,videoModel.SavePath)
-		err := os.Rename(tmpPath,videoModel.SavePath)
+		err := os.Rename(tmpPath, savePath)
 
 		if err != nil {
 			fmt.Println(err)
-		}else {
-			os.RemoveAll(videoModel.TmpPath)
+		} else {
+			if !mediaConfgiModel.SaveTmp {
+				os.RemoveAll(videoModel.TmpPath)
+			}
 		}
-		return
+
+		fmt.Println(videoModel.SavePath, "合成完成")
+		return true
 	}
 
-	// 创建临时合并文件组
+	// 表示有多个音频需要合成, 创建临时合并文件组
+	var mpegtsVideoArr []string
+	var mpegtsAudioArr []string
 
-	var mpegtsArr []string
+	audioCount := len(videoModel.Audios)
+	for index, audioModel := range videoModel.Audios {
 
-	for _,audioModel := range videoModel.Audios {
+		tmpVideoPath, tmpAudioPath := startComponseAudioToVideo(videoModel, audioModel)
 
-		tmpPath := startComponseAudioToVideo(videoModel,audioModel)
+		if tmpAudioPath == "" || tmpVideoPath == "" {
+			fmt.Println("标准音视频源获取失败")
+			return false
+		}
 
-		// 生成可拼接文件类型
-		mpegtsPath := strings.Replace(tmpPath,".mp4","",-1) + ".ts"
+		fmt.Println("lesson 音视频源已准备", index+1, "/", audioCount)
 
-		mpegtsLine := utils.CreatVideoToMpegtsLines(tmpPath,mpegtsPath)
+		mpegtsAudioArr = append(mpegtsAudioArr, tmpAudioPath)
+		mpegtsVideoArr = append(mpegtsVideoArr, tmpVideoPath)
+	}
 
-		_,err := utils.RunCMD(mpegtsLine)
+	//
+	tmpAudioPath := videoModel.TmpPath + "/" + videoModel.DirName + "_audio.ts"
+	tmpVideoPath := videoModel.TmpPath + "/" + videoModel.DirName + "_video.ts"
+
+	fmt.Println("开始合并音频源...")
+	isSuc := utils.ComponseMpegts(mpegtsAudioArr, tmpAudioPath)
+	if !isSuc {
+		fmt.Println("音频源合并失败！")
+		return false
+	}
+
+	fmt.Println("音频源合成成功，开始合并视频源...")
+	isSuc = utils.ComponseMpegts(mpegtsVideoArr, tmpVideoPath)
+
+	if !isSuc {
+		fmt.Println("视频源合成失败!")
+		return false
+	}
+
+	// 开始合并音频源与视频源
+	isSuc = utils.CreatMpegtsWithAudioAndVideo(tmpVideoPath, tmpAudioPath, tmpAVPath)
+
+	if !isSuc {
+		fmt.Println("音视频源合成失败！")
+		return false
+	}
+
+	if mediaConfgiModel.IsTs {
+		fmt.Println("源数据合成完毕!")
+
+		err := os.Rename(tmpAVPath,saveAVPath)
 
 		if err != nil {
-			fmt.Println("合并临时视频失败",videoModel.LessonDir)
-			return
+			return false
 		}
 
-		mpegtsArr = append(mpegtsArr,mpegtsPath)
+		if !mediaConfgiModel.SaveTmp {
+			os.RemoveAll(videoModel.TmpPath)
+		}
+		return true
 	}
 
-	// 将临时mpegts文件合并为目标文件,由于视频文件未知特殊性，需要将音视频分离后再封装起来
-	// 如果不执行分离后再封装操作，将可能丢失视频预览图片
-	fmt.Println("开始合并临时文件")
-	// 生成临时video
-	componseVideoPath := videoModel.TmpPath + "/video.mp4"
-	componseVideoLine := utils.CreatComponseMpegtsLines(mpegtsArr,componseVideoPath,"-an")
-	utils.RunCMD(componseVideoLine)
-	// 生成临时audio
-	componseAudioPath := videoModel.TmpPath + "/audio.mp4"
-	componseAudioLine := utils.CreatComponseMpegtsLines(mpegtsArr,componseAudioPath,"-vn")
-	utils.RunCMD(componseAudioLine)
-	// 合并临时video和audio
-	componseLine := "ffmpeg -i \"" + componseVideoPath + "\" -i \"" + componseAudioPath + "\" \"" + videoModel.SavePath + "\""
-	_,err := utils.RunCMD(componseLine)
-	if err != nil {
-		fmt.Println("合并视频失败",videoModel.SavePath)
+	// 执行转码
+	fmt.Println("源数据合成完毕,开始转码...")
+	isSuc = utils.CreatMp4WithMpegts(tmpAVPath, tmpPath, mediaConfgiModel)
+
+	if !isSuc {
+		fmt.Println("转码失败")
+		return false
 	}
-	fmt.Println("视频合并成功",videoModel.SavePath)
-	os.RemoveAll(videoModel.TmpPath)
+
+	fmt.Println("视频转码成功", videoModel.SavePath)
+
+	err := os.Rename(tmpPath,savePath)
+
+	if err != nil {
+		return false
+	}
+
+	// 判断是否保存临时文件
+	if !mediaConfgiModel.SaveTmp {
+		os.RemoveAll(videoModel.TmpPath)
+	}
+
+	return true
 }
 
-func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio) (tmpVideoPath string) {
+/// 获取一个tag的视频源和音频源，（每个tag包含一个视频源和音频源）
+/**
+ @param videoModel 视频数据模型
+ @param audioModel 待处理的音频模型
+ @return tmpVideoPath 临时视频源路径
+ @retutn tmpAudioPath 临时音频源路径
+ */
+func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio) (tmpVideoPath string,tmpAudioPath string) {
 
 	// 生成临时路径
-	tmpVideoPath = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + ".mp4"
+	tmpVideoPath = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + "_video.ts"
+	tmpAudioPath = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + "_audio.ts"
+
+	// 判断临时文件是否已经存在
+	if mediaConfgiModel.UseOldFile && utils.Exists(tmpVideoPath) && utils.Exists(tmpAudioPath) && utils.JudgeDurationEqual(tmpVideoPath,tmpAudioPath) {
+		return tmpVideoPath,tmpAudioPath
+	}
 
 	// 判断这个音频模式是否是个视频
 	if strings.Contains(audioModel.OriginPath,".mp4") {
 
-		fmt.Println("源多媒体为视频文件，开始处理为可用视频")
-		componseLine := utils.ChangeVideoSize(audioModel.OriginPath,tmpVideoPath)
-		_,status := utils.RunCMD(componseLine)
-		if status != nil {
-			tmpVideoPath = ""
+		// 将视频拆解为视频源和音频源
+		fmt.Println("源多媒体为视频文件，开始分离视频源和音频源...")
+
+		fmt.Println("分离为标准视频源...")
+		isSuc := utils.CreatVideoMpegtsWithMP4(audioModel.OriginPath,tmpVideoPath,mediaConfgiModel)
+		if !isSuc {
+			return "",""
 		}
-		fmt.Println("源视频处理完成，已生成临时文件，请勿操作计算机，以免造成误删")
-		return tmpVideoPath
+		fmt.Println("视频源分离完成，开始分离标准音频源...")
+		isSuc = utils.CreatAudioMpegtsWithMP4(audioModel.OriginPath,tmpAudioPath)
+		if !isSuc {
+			return "",""
+		}
+		fmt.Println("源视频处理完成，已生成标准视频源和音频源，请勿操作计算机，以免造成误删!")
+		return tmpVideoPath,tmpAudioPath
 	}
 
 	// 如果没有图片，则表示文件夹配置异常
 	if len(audioModel.Images) == 0 {
 
 		fmt.Println("序号为",audioModel.Seq,"的音频没有对应图片，已结束合成")
-		return tmpVideoPath
+		return "",""
 	}
 
+	audioDuration := utils.GetDuration(audioModel.OriginPath)
+
+	fmt.Println("已检测到MP3文件，开始处理标准音频源...")
+	isSuc := utils.CreatAudioMpegtsWithMP3(audioModel.OriginPath,tmpAudioPath)
+	if !isSuc {
+		fmt.Println("标准音频源获取失败")
+		return "",""
+	}
+	fmt.Println("mp3文件已处理成功，开始读取图片信息")
 	// 如果只有一张图片，则直接合成一个视频
 	if len(audioModel.Images) == 1 {
 
-		fmt.Println("开始处理音频与图片")
-		// 生成合成命令行
-		componseLine := utils.CreatOneImageAudioLines(audioModel.Images[0].OriginPath,audioModel.OriginPath,tmpVideoPath,!videoModel.HadOriginVideo)
-		// 执行命令行
-		_,status := utils.RunCMD(componseLine)
-
-		if status != nil {
-			tmpVideoPath = ""
+		fmt.Println(audioModel.Seq,"tag 只有一张图片，开始处理为标准视频源...")
+		isSuc := utils.CreatVideoMpegtsWithImage(audioModel.Images[0].OriginPath,audioDuration,tmpVideoPath,!videoModel.HadOriginVideo,mediaConfgiModel)
+		if !isSuc {
+			return "",""
 		}
 
 		fmt.Println("处理完成，已生成临时文件,请勿操作计算机，以免造成误删除")
-		return tmpVideoPath
+
+		return tmpVideoPath,tmpAudioPath
 	}
 
 	// 如果存在多张图片，则需要将多张图片分成合成视频后拼接，最后与音频文件合并，生成最终的临时视频
@@ -214,62 +360,49 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 
 	var imagesChangeSuc = true
 
-	for _,imageModel := range audioModel.Images  {
+	imageCount := len(audioModel.Images)
+	fmt.Println(audioModel.Seq,"tag 用有",imageCount,"张图片，开始处理为标准视频源...")
+
+	for index,imageModel := range audioModel.Images  {
 		// 生成指定时长的视频
-		videoPath := audioTmpDir + "/" + utils.ChangeIntToThirdStr(imageModel.Seq) + ".mp4"
-		mpegtspATH := audioTmpDir + "/" + utils.ChangeIntToThirdStr(imageModel.Seq) + ".ts"
+		videoPath := audioTmpDir + "/" + utils.ChangeIntToThirdStr(imageModel.Seq) + ".ts"
 
-		fmt.Println("开始处理图片",imageModel.OriginPath)
-		creatVideoLine := utils.CreatLines(imageModel.OriginPath,imageModel.duration,videoPath,!videoModel.HadOriginVideo)
-		_,status := utils.RunCMD(creatVideoLine)
-		if status != nil {
-			fmt.Println("图片转换视频失败，本视频合成结束",creatVideoLine)
-			imagesChangeSuc = false
-			break
+		// 判断文件是否存在
+		if !mediaConfgiModel.UseOldFile || !utils.Exists(videoPath) || !(utils.GetDuration(videoPath) == imageModel.duration) {
+
+			fmt.Println("开始处理为标准视频源",index+1,"/",imageCount)
+			isSuc := utils.CreatVideoMpegtsWithImage(imageModel.OriginPath,imageModel.duration,videoPath,!videoModel.HadOriginVideo,mediaConfgiModel)
+
+			if !isSuc {
+				imagesChangeSuc = false
+				break
+			}
 		}
 
-		fmt.Println("图片开始转换视频文件",imageModel.OriginPath)
-		mpegsLine := utils.CreatVideoToMpegtsLines(videoPath,mpegtspATH)
-		_,status = utils.RunCMD(mpegsLine)
-		if status != nil {
-			fmt.Println("视频转换中间文件失败，本视频合成失败",mpegsLine)
-			imagesChangeSuc = false
-			break
-		}
-
-		fmt.Println("转换视频文件成功",imageModel.OriginPath)
-		mpegtsArr = append(mpegtsArr,mpegtspATH)
+		mpegtsArr = append(mpegtsArr,videoPath)
 	}
 
 	if !imagesChangeSuc {
-		return ""
+		return "",""
 	}
 
-	// 合成一个componseVideo
-	fmt.Println("开始拼接视频源 tag:",audioModel.Seq)
-	componsePath := audioTmpDir + "/" + "componse.mp4"
-	componseVideoLine := utils.CreatComponseMpegtsLines(mpegtsArr,componsePath,"")
-	_,status := utils.RunCMD(componseVideoLine)
-	if status != nil {
-		fmt.Println("临时视频文件合并失败，本视频结束合成")
-		return ""
-	}
-	fmt.Println("视频源拼接完成，开始导入音频源")
-	// 将componseVideo添加audio文件
-	tmpVideoLine := utils.CreatAudioToVideoLines(audioModel.OriginPath,componsePath,tmpVideoPath)
-	_,status = utils.RunCMD(tmpVideoLine)
-	if status != nil {
-		fmt.Println("临时视频添加音频失败。本视频结束合成")
-		return ""
-	}
-	fmt.Println("已合成临时视频文件",tmpVideoPath)
-	// 合成成功，移除临时文件
-	os.RemoveAll(audioTmpDir)
+	//
+	fmt.Println("本组图片已全部处理完成，开始合并标准视频源...")
 
-	return tmpVideoPath
+	utils.ComponseMpegts(mpegtsArr,tmpVideoPath)
+
+	// 合成成功，判断是否移除临时文件
+	if !mediaConfgiModel.SaveTmp {
+
+		os.RemoveAll(audioTmpDir)
+	}
+
+	return tmpVideoPath,tmpAudioPath
 }
 
 func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componseVideo) {
+
+	fmt.Println("开始扫描lesson 目录", dirPath,"\n",saveDirPath)
 
 	hadVideo,allMp3Names := utils.GetAllMp3FiloeNames(dirPath)
 
@@ -287,8 +420,9 @@ func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componse
 	videoModel = componseVideo{
 		LessonDir:dirPath,
 		HadOriginVideo:hadVideo,
-		SavePath:saveDirPath+"/"+lessonName+".mp4",
+		SavePath:saveDirPath,
 		TmpPath:dirPath+"/"+"tmp_cine",
+		DirName:lessonName,
 	}
 
 	var audioModels []componseAudio
@@ -420,3 +554,82 @@ func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componse
 	return videoModel
 }
 
+/// 读取多媒体配置信息
+func readMediaSynthesuzerConfig(path string) (bool) {
+
+	configModel := model.MediaConfig{
+		false,
+		false,
+		false,
+		1,
+		"1920*10810",
+		1920,
+		1080,
+		1920.0/1080.0,
+		"baseline",
+		"3.0",
+		"yuv420p",
+	}
+
+	fmt.Println("开始读取配置文件: ",path)
+
+	configArg := utils.GetConfArgs(path)
+
+	if configArg == nil {
+		fmt.Println("配置文件异常，读取失败，启用默认配置：\n",configModel)
+	}else {
+
+		// 清理字典元素的空格部分
+		utils.ClearDictionaryChar(configArg," ")
+		if configArg["saveTmp"] == "true" {
+			configModel.SaveTmp = true
+		}
+		if configArg["useOldFile"] == "true" {
+			configModel.UseOldFile = true
+		}
+		if configArg["isTs"] == "true" {
+			configModel.IsTs = true
+		}
+		rate,isInt := utils.JudgeIsInt(configArg["rate"])
+		if isInt && rate > 0 {
+			configModel.Rate = rate
+		}
+		size := configArg["size"]
+
+		if size != "" && strings.Contains(size,"*") {
+			sizeValues := strings.Split(size,"*")
+			if len(sizeValues) == 2 {
+				width,_ := utils.JudgeIsInt(sizeValues[0])
+				height,_ := utils.JudgeIsInt(sizeValues[1])
+				if width > 0 && height > 0 {
+					configModel.Width = float64(width)
+					configModel.Height = float64(height)
+					configModel.Scale = configModel.Width / configModel.Height
+				}
+			}
+		}
+
+		if configArg["profile"] != "" {
+			configModel.Profile = configArg["profile"]
+		}
+		if configArg["level"] != "" {
+			configModel.Level = configArg["level"]
+		}
+		if configArg["pix"] != "" {
+			configModel.Pix = configArg["pix"]
+		}
+
+		fmt.Println("配置文件读取完毕，配置信息如下：\n")
+	}
+
+	fmt.Printf("%+v\n",configModel)
+	inputStr := utils.ClientInputWithMessage("请核对配置信息，按Enter键结束输入，y(确认配置)/n(重新配置) \n",'\n')
+
+	if inputStr == "n" || inputStr == "no" {
+		return false
+	}
+
+	mediaConfgiModel = configModel
+
+	return true
+}
