@@ -359,7 +359,7 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 	var imagesChangeSuc = true
 
 	imageCount := len(audioModel.Images)
-	fmt.Println(audioModel.Seq,"tag 用有",imageCount,"张图片，开始处理为标准视频源...")
+	fmt.Println(audioModel.Seq,"tag 共有",imageCount,"张图片，开始处理为标准视频源...")
 
 	for index,imageModel := range audioModel.Images  {
 		// 生成指定时长的视频
@@ -368,7 +368,7 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 		// 判断文件是否存在
 		if !mediaConfgiModel.UseOldFile || !utils.Exists(videoPath) || !(utils.GetDuration(videoPath) == imageModel.duration) {
 
-			fmt.Println("开始处理为标准视频源",index+1,"/",imageCount)
+			fmt.Println("开始处理为标准视频源",index+1,"/",imageCount,imageModel.OriginPath)
 			isSuc := utils.CreatVideoMpegtsWithImage(imageModel.OriginPath,imageModel.duration,videoPath,!videoModel.HadOriginVideo,mediaConfgiModel)
 
 			if !isSuc {
