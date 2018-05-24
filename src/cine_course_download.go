@@ -10,6 +10,7 @@ import (
 	"strings"
 	"path/filepath"
 	"strconv"
+	"encoding/base64"
 )
 
 /**
@@ -48,6 +49,15 @@ var oss_download_password string
 var oss_download_av_media = true
 var oss_download_image = true
 var imageStyle = ""
+
+// 覆盖二维码配置样式
+var coverStyle = ""
+var coverQrcode = false
+var coverImageKey = "logoCover.png"
+var transparent="100"
+var coverLocation="ne"
+var xInstance="0"
+var yInstance="0"
 
 func main() {
 
@@ -310,10 +320,17 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 		return  true
 	}
 
-	objectKey := "kj/" + image.Url + imageStyle
+	objectKey := "kj/" + image.Url
+
+	if coverQrcode {
+		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle)
+	}
+
+	objectKey = "kj/" + image.Url + imageStyle
+
 	url := "http://oss.bstcine.com/" + objectKey
 
-	fmt.Println("开始下载资源:",objectKey)
+	fmt.Println("开始下载资源:",url)
 
 	if !utils.CheckResourceSaveStatus(objectKey) {
 		fmt.Println("资源不存在:",objectKey)
@@ -699,30 +716,57 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 	utils.ClearDictionaryChar(configMap," ")
 	var configObject = configMap
 
-	//for _,configLine := range configMap {
-	//
-	//	var lineValues = strings.Split(configLine,"=")
-	//
-	//	if len(lineValues) > 1 {
-	//
-	//		configObject[lineValues[0]] = lineValues[1]
-	//
-	//	}else {
-	//
-	//		configObject[lineValues[0]] = ""
-	//
-	//	}
-	//
-	//}
-
 	oss_download_accessKeyId = configObject["AccessKeyId"]
 	oss_download_accessKeySecret = configObject["AccessKeySecret"]
 	oss_download_account = configObject["account"]
 	oss_download_password = configObject["password"]
 
+	// 获取下载样式
 	imageStyle = configObject["style"]
 	download_image := configObject["download_image"]
 	download_av_media := configObject["download_av_media"]
+
+	// 获取覆盖水印信息
+	if configObject["coverQrcode"] == "true" {
+		coverQrcode = true
+
+		if configObject["coverImageKey"] != "" {
+			coverImageKey = configObject["coverImageKey"]
+		}
+
+		// 获取base64编码
+		coverStyle = coverImageKey + "?x-oss-process=image/resize,P_25"
+		coverStyle = base64.StdEncoding.EncodeToString([]byte(coverStyle))
+
+		// 替换编码中的'/','+'
+		coverStyle = strings.Replace(coverStyle,"+","-",-1)
+		coverStyle = strings.Replace(coverStyle,"/","_",-1)
+
+		value,isInt := utils.JudgeIsInt(configObject["transparent"])
+		if isInt && value >= 0 && value <= 100 {
+			transparent = configObject["transparent"]
+		}
+		locations := "nw,north,ne,west,center,east,sw,south,se"
+
+		if strings.Contains(locations,configObject["coverLocation"]) {
+			coverLocation = configObject["coverLocation"]
+		}
+
+		x,isInt := utils.JudgeIsInt(configObject["x"])
+
+		if isInt && x >= 0 && x <= 4096 {
+			xInstance = configObject["x"]
+		}
+
+		y,isInt := utils.JudgeIsInt(configObject["y"])
+
+		if isInt && y >= 0 && y <= 4096 {
+			yInstance = configObject["y"]
+		}
+
+		// 生成完整的样式
+		coverStyle = "image/watermark,image_"+coverStyle+",t_"+transparent+",g_"+coverLocation+",x_"+xInstance+",y_"+yInstance
+	}
 
 	if download_image == "false" {
 		oss_download_image = false

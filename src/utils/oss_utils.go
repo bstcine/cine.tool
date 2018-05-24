@@ -21,38 +21,46 @@ import (
 
 var bucket *oss.Bucket
 
-//func DownloadFileEndPoint(url string, savePath string) bool {
-//
-//	// 本地是否存在下载文件的临时文件
-//
-//	//"http://oss.bstcine.com/kj/2017/03/21/095005309SHhaBkq.mp3"
-//	//http://oss.bstcine.com/kj/2017/03/21/095015304Skbtk80.jpg@!watermark_cine
-//	req,err := http.Head("http://oss.bstcine.com/kj/2017/03/21/095005309SHhaBkq.mp3")
-//
-//	if err != nil {
-//		print(err)
-//		return false
-//	}
-//
-//	partType := req.Header.Get("Accept-Ranges")
-//
-//	if partType != "bytes" {
-//		return DownloadFile(url,savePath)
-//	}
-//	fmt.Println("可以执行分片下载",partType)
-//	// 执行分片下载
-//	fileLengthStr := req.Header.Get("Content-Length")
-//	fileContent,err := strconv.ParseInt(fileLengthStr,10,0)
-//
-//	if err != nil {
-//		fmt.Println("文件大小获取失败\n",err)
-//		return  false
-//	}
-//
-//	fmt.Println(fileContent)
-//
-//	return true
-//}
+func DownloadImage(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string, style string) bool {
+
+	var err error
+
+	if bucket == nil {
+		client,err := oss.New(endpoint,accessKeyId,accessKeySecret)
+
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("创建客户端对象失败")
+			return false
+		}
+
+		bucket,err = client.Bucket(bucketName)
+
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("创建bucket失败")
+			return false
+		}
+	}
+
+	process := oss.Process(style)
+
+	url,err := bucket.SignURL(objectKey,"GET",300,process)
+
+	if err != nil {
+		fmt.Println("url 生成失败")
+		return false
+	}
+
+	err = bucket.GetObjectToFileWithURL(url,savePath)
+
+	if err != nil {
+		fmt.Println("下载失败",err)
+		return false
+	}
+	fmt.Println("签名url",url)
+	return true
+}
 
 func DownloadOssResource(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string) bool {
 
