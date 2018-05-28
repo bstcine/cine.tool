@@ -62,7 +62,9 @@ func GetAllFiloeNames(dirPath string) []string{
 		if file.IsDir() {
 			continue
 		}
-		fileNames = append(fileNames,file.Name())
+		name := strings.Replace(file.Name(),"._","",-1)
+
+		fileNames = append(fileNames,name)
 	}
 
 	return fileNames
