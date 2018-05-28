@@ -77,6 +77,11 @@ func dealDirectory(dirPath string,savePath string) {
 	dirName := dirComponents[len(dirComponents)-1]
 	if strings.Contains(dirName,"ls_") {
 		videoModel := dealLessonDirectory(dirPath,savePath)
+		fmt.Println("一个课件扫描完成",videoModel.LessonDir)
+		for _,audioModel := range videoModel.Audios {
+			fmt.Printf("%+v\n",audioModel)
+		}
+
 		startComponseVideoModel(videoModel)
 		fmt.Println("lesson目录处理结束",dirPath)
 	}else {
