@@ -417,6 +417,8 @@ func dealLessonDirectory(dirPath string,saveDirPath string) (videoModel componse
 
 	//
 	allFileNames := utils.GetAllFiloeNames(dirPath)
+
+	fmt.Println("所有文件名称",allFileNames)
 	utils.CreatDirectory(saveDirPath)
 
 	lessonComponents := strings.Split(dirPath,"/")
