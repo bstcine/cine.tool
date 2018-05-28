@@ -144,15 +144,6 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 
 	_,courseModels := utils.ListWithDownloadCourses(token,courseIds)
 
-	if len(courseModels) != len(courseAliasNames) {
-
-		fmt.Println("网端可下载课件数量与别名不符")
-		fmt.Println("可下载课件如下:\n",courseModels)
-		fmt.Println("别名如下:\n",courseAliasNames)
-
-		return false
-	}
-
 	var realCourseModels []model.Course
 
 	for _,courseId := range courseIds {
@@ -168,6 +159,15 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 
 	courseModels = realCourseModels
 
+	if len(courseModels) != len(courseAliasNames) {
+
+		fmt.Println("网端可下载课件数量与别名不符")
+		fmt.Println("可下载课件如下:\n",courseModels)
+		fmt.Println("别名如下:\n",courseAliasNames)
+
+		return false
+	}
+
 	var downloadStatus bool = true
 
 	// 已正确获取服务器权限，开始访问列表
@@ -175,8 +175,6 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 	for i := 0; i < len(courseModels);i++  {
 
 		courseModel := courseModels[i]
-
-
 
 		alias := courseAliasNames[i]
 
@@ -783,6 +781,13 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 	courseIdString:=configObject["courseIds"]
 	courseAliasNameString:=configObject["aliasNames"]
 	lessonIdString:=configObject["lessonIds"]
+
+	if courseIdString == "" {
+		return nil,nil,nil
+	}
+	if courseAliasNameString == "" {
+		courseAliasNameString = courseIdString
+	}
 
 	courseIdString = strings.Replace(courseIdString," ","",-1)
 	lessonIdString = strings.Replace(lessonIdString," ","",-1)

@@ -325,6 +325,8 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 		return "",""
 	}
 
+	// 开始检测源文件
+	fmt.Println(audioModel.OriginPath,"\n",audioModel.Images)
 	audioDuration := utils.GetDuration(audioModel.OriginPath)
 
 	fmt.Println("已检测到MP3文件，开始处理标准音频源...")

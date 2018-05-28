@@ -55,10 +55,10 @@ func DownloadImage(endpoint string, accessKeyId string, accessKeySecret string, 
 	err = bucket.GetObjectToFileWithURL(url,savePath)
 
 	if err != nil {
-		fmt.Println("下载失败",err)
+		fmt.Println("下载失败",url,"\n",err)
 		return false
 	}
-	fmt.Println("签名url",url)
+	fmt.Println("下载成功",objectKey)
 	return true
 }
 
