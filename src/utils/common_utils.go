@@ -64,6 +64,9 @@ func GetAllFiloeNames(dirPath string) []string{
 		}
 		name := strings.Replace(file.Name(),"._","",-1)
 
+		if strings.HasPrefix(name,".") {
+			continue
+		}
 		fileNames = append(fileNames,name)
 	}
 
@@ -86,13 +89,21 @@ func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
 		if file.IsDir() {
 			continue
 		}
-		fileName := file.Name()
-
+		fileName := strings.Replace(file.Name(),"._","",-1)
+		if strings.HasPrefix(fileName,".") {
+			continue
+		}
 		if !strings.Contains(fileName,".mp3") {
 			if !strings.Contains(fileName,".mp4") {
 				continue
 			}
 			hadVideo = true
+		}
+
+		for _,name := range fileNames {
+			if name == fileName {
+				continue
+			}
 		}
 		fileNames = append(fileNames,fileName)
 	}
