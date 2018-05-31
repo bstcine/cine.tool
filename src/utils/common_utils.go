@@ -58,18 +58,25 @@ func GetAllFiloeNames(dirPath string) []string{
 	}
 
 	var fileNames []string
+	var tempNames []string
 	for _,file := range fileHandler {
 		if file.IsDir() {
 			continue
 		}
+		tempNames = append(tempNames,file.Name())
 		name := strings.Replace(file.Name(),"._","",-1)
 
 		if strings.HasPrefix(name,".") {
 			continue
 		}
+
+		if Contains(fileNames,name) {
+			continue
+		}
 		fileNames = append(fileNames,name)
 	}
 
+	fmt.Println("所有文件名称如下: \n",tempNames)
 	return fileNames
 }
 
@@ -85,10 +92,13 @@ func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
 		return false,nil
 	}
 
+	var tempNames []string
+
 	for _,file := range fileHandler {
 		if file.IsDir() {
 			continue
 		}
+		tempNames = append(tempNames,file.Name())
 		fileName := strings.Replace(file.Name(),"._","",-1)
 		if strings.HasPrefix(fileName,".") {
 			continue
@@ -100,15 +110,25 @@ func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
 			hadVideo = true
 		}
 
-		for _,name := range fileNames {
-			if name == fileName {
-				continue
-			}
+		if Contains(fileNames,fileName) {
+			continue
 		}
 		fileNames = append(fileNames,fileName)
 	}
 
+	fmt.Println("所有音视频文件名称如下: \n",tempNames)
 	return hadVideo,fileNames
+}
+
+/// 判断一个数组中是否包含指定元素
+func Contains(sliceEl []string, seq string) bool {
+
+	for _,ele := range sliceEl {
+		if ele == seq {
+			return true
+		}
+	}
+	return false
 }
 
 /// 判断一个字符串是否为int
