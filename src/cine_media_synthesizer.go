@@ -271,7 +271,20 @@ func startComponseAudioToVideo(videoModel componseVideo,audioModel componseAudio
 	tmpTS = videoModel.TmpPath + "/" + utils.ChangeIntToThirdStr(audioModel.Seq) + ".ts"
 
 	// 判断临时文件是否已经存在
+	if mediaConfgiModel.UseOldFile && utils.Exists(tmpTS) && utils.JudgeDurationEqual(tmpVideoPath,audioModel.OriginPath) {
+		fmt.Println("ts文件已存在，不需要执行合并操作")
+		return tmpTS
+	}
+
 	if mediaConfgiModel.UseOldFile && utils.Exists(tmpVideoPath) && utils.Exists(tmpAudioPath) && utils.JudgeDurationEqual(tmpVideoPath,tmpAudioPath) {
+
+		fmt.Println("已存在原始音视频文件，开始合并源文件")
+		// 将音视频源合成为标准数据源
+		isSuc := utils.CreatMpegtsWithAudioAndVideo(tmpVideoPath,tmpAudioPath,tmpTS)
+		if !isSuc {
+			return ""
+		}
+		fmt.Println("源视频处理完成，已生成标准多媒体数据文件，请勿操作计算机，以免造成误删!")
 		return tmpTS
 	}
 
