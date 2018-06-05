@@ -395,44 +395,6 @@ func checkImageStatus(courseId string,imagePath string) int {
 	return  1
 }
 
-//func checkResourceSaveStatus(objectKey string) bool {
-//
-//	// 检查图片状态需要检查两次，一次为原图，一次为水印图，两次成功才返回 1
-//	requestPath := "http://oss.bstcine.com/" + objectKey
-//
-//	checkCount = 3
-//
-//	for checkCount >= 0  {
-//
-//		checkCount -= 1
-//
-//		resp,err := http.Head(requestPath)
-//
-//		if err == nil {
-//
-//			if resp.StatusCode == 200 {
-//
-//				length := resp.Header["Content-Length"]
-//
-//				if len(length) > 0 {
-//
-//					currentLength,err := strconv.ParseInt(length[0],0,64)
-//
-//					if err != nil {
-//						return  false
-//					}
-//
-//					return (currentLength > 10240)
-//				}
-//
-//			}
-//
-//		}
-//
-//	}
-//
-//	return  false
-//}
 
 //***************************************************************
 //*********************                 *************************

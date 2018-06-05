@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"encoding/json"
+	"io/ioutil"
 )
 
 /// 下载oss上的资源
@@ -20,6 +22,64 @@ import (
  */
 
 var bucket *oss.Bucket
+
+func GetImageInfo(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, objectKey string) (width int64,height int64,err error) {
+
+	if bucket == nil {
+		client,err := oss.New(endpoint,accessKeyId,accessKeySecret)
+
+		if err != nil {
+			fmt.Println("创建客户端对象失败")
+			return 0,0,err
+		}
+
+		bucket,err = client.Bucket(bucketName)
+
+		if err != nil {
+			fmt.Println("创建bucket失败")
+			return 0,0,err
+		}
+	}
+
+	process := oss.Process("image/info")
+
+	url,err := bucket.SignURL(objectKey,"GET",300,process)
+
+	if err != nil {
+		return 0,0,err
+	}
+
+	resp,err := http.Get(url)
+
+	defer resp.Body.Close()
+
+	if err != nil {
+		return 0,0,err
+	}
+
+	body,err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return 0,0,err
+	}
+
+	var result map[string]interface{}
+
+	err = json.Unmarshal(body,&result)
+
+	if err != nil {
+		return 0,0,err
+	}
+	// 取出其中的宽度和高度
+	widthInterface := result["ImageWidth"].(map[string]interface{})
+	heightInterface := result["ImageHeight"].(map[string]interface{})
+	width,_ = JudgeIsInt64(widthInterface["value"].(string))
+	height,_ = JudgeIsInt64(heightInterface["value"].(string))
+
+	fmt.Println(width,height)
+
+	return width,height,nil
+}
 
 func DownloadImage(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string, style string) bool {
 

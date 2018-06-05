@@ -13,3 +13,17 @@ type MediaConfig struct {
 	Level string          // 配置属性level
 	Pix string            // 配置属性fix_fmt
 }
+
+type DownloadConfig struct {
+	CoverStyle string     // 覆盖类型
+	CoverQrcode bool      // 是否覆盖水印图片
+	CoverImageKey string  // 覆盖水印图objectKey
+	Transparent string    // 覆盖水印图名都
+	CoverLocation string  // 覆盖水印位置
+	XInstance string      // x轴偏移量
+	YInstance string      // y轴偏移量
+	WaterWS float64       // 水印图相对于大图的宽度比例
+	WaterHS float64       // 水印图相对第一大图的高度比例
+	ImageWidth int64      // 原图宽度
+	ImageHeight int64     // 原图高度
+}

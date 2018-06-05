@@ -51,13 +51,60 @@ var oss_download_image = true
 var imageStyle = ""
 
 // 覆盖二维码配置样式
-var coverStyle = ""
-var coverQrcode = false
-var coverImageKey = "logoCover.png"
-var transparent="100"
-var coverLocation="ne"
-var xInstance="0"
-var yInstance="0"
+var downloadConfig = model.DownloadConfig{
+	"",                   // 覆盖类型
+	false,              // 是否覆盖水印图片
+	"logoCover.png",  // 覆盖水印图objectKey
+	"100",               // 覆盖水印图名都
+	"ne",              // 覆盖水印位置
+	"0",                  // x轴偏移量
+	"0",                  // y轴偏移量
+	0.25,                 // 水印图相对于大图的宽度比例
+	0.25,                 // 水印图相对第一大图的高度比例
+	0,                 // 待下载图片宽度（大图）
+	0,                 // 待下载图片高度（大图）
+}
+
+var _coverStyle string
+
+func coverStyle (imageWidth int64,imageHeight int64) string {
+
+	var waterMarkW int = 0
+	var waterMarkH int = 0
+
+	// 判断是否需要重新编码
+	if _coverStyle != "" && downloadConfig.ImageWidth == imageWidth && downloadConfig.ImageHeight == imageHeight {
+		return _coverStyle
+	}
+
+	// 计算目标尺寸
+	waterMarkW = int(float64(imageWidth) * downloadConfig.WaterWS)
+	waterMarkH = int(float64(imageHeight) * downloadConfig.WaterHS)
+
+	// 获取base64编码
+	coverStyle := downloadConfig.CoverImageKey + "?x-oss-process=image/resize,"
+	if waterMarkW == 0 || waterMarkH == 0 {
+		coverStyle = coverStyle + "P_20"
+	}else {
+		coverStyle = coverStyle + "m_fixed,w_" + utils.ChangeInt(waterMarkW) + ",h_" + utils.ChangeInt(waterMarkH)
+	}
+	fmt.Println(coverStyle,imageWidth,imageHeight)
+	coverStyle = base64.StdEncoding.EncodeToString([]byte(coverStyle))
+	fmt.Println(coverStyle)
+	// 替换编码中的'/','+'
+	coverStyle = strings.Replace(coverStyle,"+","-",-1)
+	coverStyle = strings.Replace(coverStyle,"/","_",-1)
+	// 生成完整的样式
+	coverStyle = "image/watermark,image_" + coverStyle + ",t_" + downloadConfig.Transparent + ",g_" +
+		downloadConfig.CoverLocation + ",x_" + downloadConfig.XInstance + ",y_" + downloadConfig.YInstance
+
+		fmt.Println(coverStyle)
+	downloadConfig.ImageWidth = imageWidth
+	downloadConfig.ImageHeight = imageHeight
+	_coverStyle = coverStyle
+	// 返回最终的覆盖样式
+	return coverStyle
+}
 
 func main() {
 
@@ -320,8 +367,16 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 
 	objectKey := "kj/" + image.Url
 
-	if coverQrcode {
-		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle)
+	if downloadConfig.CoverQrcode {
+
+		width,height,err := utils.GetImageInfo(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,objectKey)
+
+		if err != nil || width == 0 || height == 0 {
+			fmt.Println(err)
+			return false
+		}
+
+		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle(width,height))
 	}
 
 	objectKey = "kj/" + image.Url + imageStyle
@@ -696,7 +751,6 @@ func getToken() string {
 //************************* 管理配置信息 ****************************
 //*****************************************************************
 //*****************************************************************
-
 /// 读取配置文件
 func readConfig(configPath string) (courseIds []string, courseAlias []string, lessonIds [][]string) {
 
@@ -726,44 +780,43 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 
 	// 获取覆盖水印信息
 	if configObject["coverQrcode"] == "true" {
-		coverQrcode = true
+		downloadConfig.CoverQrcode = true
 
 		if configObject["coverImageKey"] != "" {
-			coverImageKey = configObject["coverImageKey"]
+			downloadConfig.CoverImageKey = configObject["coverImageKey"]
 		}
 
-		// 获取base64编码
-		coverStyle = coverImageKey + "?x-oss-process=image/resize,P_25"
-		coverStyle = base64.StdEncoding.EncodeToString([]byte(coverStyle))
+		coverScaleW,isFloat64 := utils.JudgeIsFloat64(configObject["coverWidthScale"])
+		if isFloat64 && coverScaleW > 0 && coverScaleW <= 1 {
+			downloadConfig.WaterWS = coverScaleW
+		}
 
-		// 替换编码中的'/','+'
-		coverStyle = strings.Replace(coverStyle,"+","-",-1)
-		coverStyle = strings.Replace(coverStyle,"/","_",-1)
+		coverScaleH,isFloat64 := utils.JudgeIsFloat64(configObject["coverHeightScale"])
+		if isFloat64 && coverScaleH > 0 && coverScaleH <= 1 {
+			downloadConfig.WaterHS = coverScaleH
+		}
 
 		value,isInt := utils.JudgeIsInt(configObject["transparent"])
 		if isInt && value >= 0 && value <= 100 {
-			transparent = configObject["transparent"]
+			downloadConfig.Transparent = configObject["transparent"]
 		}
 		locations := "nw,north,ne,west,center,east,sw,south,se"
 
 		if strings.Contains(locations,configObject["coverLocation"]) {
-			coverLocation = configObject["coverLocation"]
+			downloadConfig.CoverLocation = configObject["coverLocation"]
 		}
 
 		x,isInt := utils.JudgeIsInt(configObject["x"])
 
 		if isInt && x >= 0 && x <= 4096 {
-			xInstance = configObject["x"]
+			downloadConfig.XInstance = configObject["x"]
 		}
 
 		y,isInt := utils.JudgeIsInt(configObject["y"])
 
 		if isInt && y >= 0 && y <= 4096 {
-			yInstance = configObject["y"]
+			downloadConfig.YInstance = configObject["y"]
 		}
-
-		// 生成完整的样式
-		coverStyle = "image/watermark,image_"+coverStyle+",t_"+transparent+",g_"+coverLocation+",x_"+xInstance+",y_"+yInstance
 	}
 
 	if download_image == "false" {

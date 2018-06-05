@@ -131,6 +131,15 @@ func Contains(sliceEl []string, seq string) bool {
 	return false
 }
 
+/// 判断一个字符串是否为float64
+func JudgeIsFloat64(judgeStr string) (float64, bool) {
+	value,err := strconv.ParseFloat(judgeStr,64)
+	if err != nil {
+		return 0,false
+	}
+	return value,true
+}
+
 /// 判断一个字符串是否为int
 func JudgeIsInt(judgeStr string) (int, bool) {
 	value,err := strconv.ParseInt(judgeStr,0,32)
@@ -138,6 +147,15 @@ func JudgeIsInt(judgeStr string) (int, bool) {
 		return 0,false
 	}
 	return int(value),true
+}
+
+/// 判断是否为int64类型
+func JudgeIsInt64(judgeStr string) (int64, bool) {
+	value,err := strconv.ParseInt(judgeStr,0,64)
+	if err != nil {
+		return 0,false
+	}
+	return value,true
 }
 
 func ChangeIntToThirdStr(value int) string {
