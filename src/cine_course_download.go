@@ -59,36 +59,41 @@ var downloadConfig = model.DownloadConfig{
 	"ne",              // 覆盖水印位置
 	"0",                  // x轴偏移量
 	"0",                  // y轴偏移量
-	0.25,                 // 水印图相对于大图的宽度比例
-	0.25,                 // 水印图相对第一大图的高度比例
-	0,                 // 待下载图片宽度（大图）
-	0,                 // 待下载图片高度（大图）
+	1,                 // 水印图相对于大图的宽度比例
+	1,                 // 水印图相对第一大图的高度比例
 }
 
-var _coverStyle string
+var coverStyle string
 
-func coverStyle (imageWidth int64,imageHeight int64) string {
+func createCoverStyle () {
+
+	// 判断是否需要重新编码
+	if coverStyle != "" {
+		return
+	}
 
 	var waterMarkW int = 0
 	var waterMarkH int = 0
 
-	// 判断是否需要重新编码
-	if _coverStyle != "" && downloadConfig.ImageWidth == imageWidth && downloadConfig.ImageHeight == imageHeight {
-		return _coverStyle
+	coverWidth,coverHeight,err := utils.GetPublicImageInfo(downloadConfig.CoverImageKey)
+
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	// 计算目标尺寸
-	waterMarkW = int(float64(imageWidth) * downloadConfig.WaterWS)
-	waterMarkH = int(float64(imageHeight) * downloadConfig.WaterHS)
+	waterMarkW = int(float64(coverWidth) * downloadConfig.WaterWS)
+	waterMarkH = int(float64(coverHeight) * downloadConfig.WaterHS)
 
 	// 获取base64编码
-	coverStyle := downloadConfig.CoverImageKey + "?x-oss-process=image/resize,"
+	coverStyle = downloadConfig.CoverImageKey + "?x-oss-process=image/resize,"
 	if waterMarkW == 0 || waterMarkH == 0 {
 		coverStyle = coverStyle + "P_20"
 	}else {
 		coverStyle = coverStyle + "m_fixed,w_" + utils.ChangeInt(waterMarkW) + ",h_" + utils.ChangeInt(waterMarkH)
 	}
-	fmt.Println(coverStyle,imageWidth,imageHeight)
+	fmt.Println(coverStyle,coverWidth,coverHeight)
 	coverStyle = base64.StdEncoding.EncodeToString([]byte(coverStyle))
 	fmt.Println(coverStyle)
 	// 替换编码中的'/','+'
@@ -97,13 +102,6 @@ func coverStyle (imageWidth int64,imageHeight int64) string {
 	// 生成完整的样式
 	coverStyle = "image/watermark,image_" + coverStyle + ",t_" + downloadConfig.Transparent + ",g_" +
 		downloadConfig.CoverLocation + ",x_" + downloadConfig.XInstance + ",y_" + downloadConfig.YInstance
-
-		fmt.Println(coverStyle)
-	downloadConfig.ImageWidth = imageWidth
-	downloadConfig.ImageHeight = imageHeight
-	_coverStyle = coverStyle
-	// 返回最终的覆盖样式
-	return coverStyle
 }
 
 func main() {
@@ -155,12 +153,8 @@ func main() {
 		return
 	}
 
-	//// 检查是否存在错误日志表
-	errorStatus := candownloadErrorLog()
-
-	if errorStatus {
-		return
-	}
+	// 开始生成配置样式
+	createCoverStyle()
 
 	// 开始登入服务器获取权限
 	token := utils.GetAdminPermission(oss_download_account,oss_download_password)
@@ -376,7 +370,7 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 			return false
 		}
 
-		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle(width,height))
+		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle)
 	}
 
 	objectKey = "kj/" + image.Url + imageStyle

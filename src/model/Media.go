@@ -22,8 +22,6 @@ type DownloadConfig struct {
 	CoverLocation string  // 覆盖水印位置
 	XInstance string      // x轴偏移量
 	YInstance string      // y轴偏移量
-	WaterWS float64       // 水印图相对于大图的宽度比例
-	WaterHS float64       // 水印图相对第一大图的高度比例
-	ImageWidth int64      // 原图宽度
-	ImageHeight int64     // 原图高度
+	WaterWS float64       // 水印图相对于原图的宽度比例
+	WaterHS float64       // 水印图相对于原图的高度比例
 }

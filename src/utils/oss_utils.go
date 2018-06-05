@@ -23,6 +23,41 @@ import (
 
 var bucket *oss.Bucket
 
+func GetPublicImageInfo(objectKey string) (width int64,height int64,err error){
+	url := "http://oss.bstcine.com/"+objectKey+"?x-oss-process=image/info"
+	fmt.Println(url)
+	resp,err := http.Get(url)
+
+	defer resp.Body.Close()
+
+	if err != nil {
+		return 0,0,err
+	}
+
+	body,err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return 0,0,err
+	}
+
+	var result map[string]interface{}
+
+	err = json.Unmarshal(body,&result)
+
+	if err != nil {
+		return 0,0,err
+	}
+	// 取出其中的宽度和高度
+	widthInterface := result["ImageWidth"].(map[string]interface{})
+	heightInterface := result["ImageHeight"].(map[string]interface{})
+	width,_ = JudgeIsInt64(widthInterface["value"].(string))
+	height,_ = JudgeIsInt64(heightInterface["value"].(string))
+
+	fmt.Println(width,height)
+
+	return width,height,nil
+}
+
 func GetImageInfo(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, objectKey string) (width int64,height int64,err error) {
 
 	if bucket == nil {
