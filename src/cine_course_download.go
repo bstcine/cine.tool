@@ -363,13 +363,6 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 
 	if downloadConfig.CoverQrcode {
 
-		width,height,err := utils.GetImageInfo(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,objectKey)
-
-		if err != nil || width == 0 || height == 0 {
-			fmt.Println(err)
-			return false
-		}
-
 		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle)
 	}
 
