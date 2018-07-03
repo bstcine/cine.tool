@@ -16,6 +16,31 @@ import (
 	"encoding/json"
 )
 
+/// 往文件中追加数据
+func AppendByteToFile(filePath string, byteData []byte) bool{
+
+	// 判断文件是否存在
+	_,err := os.Stat(filePath)
+
+	if err != nil {
+		os.Create(filePath)
+	}
+
+	fileHandler,err := os.OpenFile(filePath,os.O_WRONLY|os.O_APPEND,0666)
+
+	w := bufio.NewWriter(fileHandler);
+	_,err = w.Write(byteData);
+	if err != nil {
+		fmt.Println(err);
+		return  false
+	}
+
+	w.Flush()
+	fileHandler.Close()
+
+	return true
+}
+
 /// 往文件中追加文字
 /**
  * @param filePath 需要追加的文件路径

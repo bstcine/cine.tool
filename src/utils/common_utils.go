@@ -10,7 +10,45 @@ import (
 	"strconv"
 	"bufio"
 	"log"
+	"time"
+	"math/rand"
+	"io"
+	"path/filepath"
 )
+
+/**
+ * @ 生成指定范围内指定数量的不重复的随机数
+ * @param start 起始点
+ * @param end 终点
+ * @param count 随机数的数量
+ * @return 计算结果
+ */
+func GenerateRandomNumber(start int, end int, count int) []int {
+	//范围检查
+	if end < start || (end-start) < count {
+		return nil
+	}
+	//存放结果的slice
+	nums := make([]int, 0)
+	//随机数生成器，加入时间戳保证每次生成的随机数不一样
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for len(nums) < count {
+		//生成随机数
+		num := r.Intn((end - start)) + start
+		//查重
+		exist := false
+		for _, v := range nums {
+			if v == num {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			nums = append(nums, num)
+		}
+	}
+	return nums
+}
 
 /// 清理字典中的所有值的指定字符（如空格键，','等）
 func ClearDictionaryChar(dict map[string]string, char string){
@@ -24,6 +62,68 @@ func ClearDictionaryChar(dict map[string]string, char string){
 		value = strings.Replace(value,char,"",-1)
 		dict[key] = value
 	}
+}
+
+/// 拷贝文件夹到指定位置
+func CopyDir(originPath string,targetPath string) bool{
+
+	CreatDirectory(targetPath);
+
+	err := filepath.Walk(originPath, func(path string, info os.FileInfo, err error) error {
+
+		if err != nil {
+			return  nil;
+		}
+		relativePath := strings.Replace(path,originPath,"",-1);
+		newPath := targetPath + relativePath;
+
+		if info.IsDir() {
+			// 创建临时文件目录
+			//fmt.Println("目录地址：",path);
+			if relativePath != "" {
+				CreatDirectory(newPath);
+			}
+		}else {
+			// 创建
+			//fmt.Println("新的地址：",dest_new);
+			CopyFile(path,newPath);
+		}
+
+		return  nil
+	})
+
+	if err != nil {
+		fmt.Println(err);
+		return false;
+	}
+
+	return true;
+}
+/// 拷贝文件到指定位置
+func CopyFile(originPath string, targetPath string) bool {
+
+	srcFile,err := os.Open(originPath);
+	if err != nil {
+		fmt.Println(err);
+		return  false
+	}
+	defer srcFile.Close();
+
+	dstFile,err := os.Create(targetPath);
+	if err != nil {
+		fmt.Println(err);
+		return false
+	}
+
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile,srcFile);
+	if err != nil {
+		fmt.Println(err);
+		return  false
+	}
+
+	return true
 }
 
 /// 获取目录下的所有目录名称
