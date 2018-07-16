@@ -76,21 +76,6 @@ func getConfigModel() (model.OSSConfig,bool) {
 	return  configModel,true
 }
 
-func test(){
-	//resp,_ := http.Get("http://www.bstcine.com/f/2016/10/08/163623548SzYEGzy.jpg");
-	//resp,_ := http.Get("http://www.bstcine.com/f/2016/10/08/163623548SzYEGzy.jpg");
-	//if resp.StatusCode != 200 {
-	//	return
-	//}
-	//contentType := resp.Header["Content-Type"]
-	//if len(contentType) == 1 && contentType[0] == "text/html; charset=utf-8"{
-	//	fmt.Println("就是他不好使")
-	//}
-	//fmt.Println(contentType,len(contentType))
-	//fmt.Println(resp.StatusCode,"123",resp.Status)
-	fmt.Println("测试方法")
-}
-
 func getOriginHeaderImage(resType uint, configModel model.OSSConfig){
 
 	// 通过循环获取
@@ -141,10 +126,10 @@ func moveResource(fmedia FMediaModel, configModel model.OSSConfig) bool {
 		return true
 	}
 
-	endPoint := "oss-cn-beijing.aliyuncs.com"
+	endPoint := "oss-cn-shanghai.aliyuncs.com"
 	keyId := configModel.KeyId
 	secret := configModel.KeySecret
-	bucketName := "static-cine-pub";
+	bucketName := "static-cine-oss";
 	saveObject := "f/"
 
 	// 将声音资源写入到oss上
