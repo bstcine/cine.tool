@@ -14,13 +14,15 @@ import (
 
 func GetBaseUrl(url string) string {
 
-	if conf.IsTestHost {
-		url = conf.API_BASE_URL_TEST + url
-	} else {
-		url = conf.API_BASE_URL + url
+	switch conf.HostEnv {
+	case 0:
+		return conf.API_BASE_URL_LOCAL + url;
+	case 1:
+		return conf.API_BASE_URL_TEST + url;
+	case 2:
+		return conf.API_BASE_URL + url;
 	}
-
-	return url
+	return "";
 }
 
 func CommonPost(url string, request model.Request, res interface{}) {

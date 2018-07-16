@@ -12,3 +12,8 @@ type InputArgs struct {
 	LocalPath  string /** 输入的目录或文件路径 */
 	LogoPath   string /** 水印图片名称*/
 }
+
+type OSSConfig struct {
+	KeyId      string // accesskeyid
+	KeySecret  string // accesskeysecret
+}

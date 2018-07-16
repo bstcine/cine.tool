@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"encoding/json"
 	"io/ioutil"
+	"errors"
 )
 
 /// 下载oss上的资源
@@ -23,6 +24,7 @@ import (
 
 var bucket *oss.Bucket
 
+/// 获取公开图片信息
 func GetPublicImageInfo(objectKey string) (width int64,height int64,err error){
 	url := "http://oss.bstcine.com/"+objectKey+"?x-oss-process=image/info"
 	fmt.Println(url)
@@ -58,6 +60,7 @@ func GetPublicImageInfo(objectKey string) (width int64,height int64,err error){
 	return width,height,nil
 }
 
+/// 下载图片
 func GetImageInfo(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, objectKey string) (width int64,height int64,err error) {
 
 	if bucket == nil {
@@ -116,6 +119,7 @@ func GetImageInfo(endpoint string, accessKeyId string, accessKeySecret string, b
 	return width,height,nil
 }
 
+/// 下载图片（oss）
 func DownloadImage(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string, style string) bool {
 
 	var err error
@@ -157,6 +161,7 @@ func DownloadImage(endpoint string, accessKeyId string, accessKeySecret string, 
 	return true
 }
 
+/// 下载oss资源
 func DownloadOssResource(endpoint string, accessKeyId string, accessKeySecret string, bucketName string, savePath string, objectKey string) bool {
 
 	var err error
@@ -200,9 +205,9 @@ func DownloadOssResource(endpoint string, accessKeyId string, accessKeySecret st
 	return false
 }
 
+/// 检查资源是否存在（oss）
 func CheckResourceSaveStatus(objectKey string) bool {
 
-	// 检查图片状态需要检查两次，一次为原图，一次为水印图，两次成功才返回 1
 	requestPath := "http://oss.bstcine.com/" + objectKey
 
 	checkCount := 3
@@ -227,7 +232,7 @@ func CheckResourceSaveStatus(objectKey string) bool {
 						return  false
 					}
 
-					return (currentLength > 10240)
+					return (currentLength > 10240);
 				}
 
 			}else {
@@ -241,4 +246,47 @@ func CheckResourceSaveStatus(objectKey string) bool {
 	}
 
 	return  false
+}
+
+/// 上传文件
+func PutFile(resourcePath string,endpoint string, accessKeyId string, accessKeySecret string, bucketName string,saveObjectKey string) error {
+
+	var err error;
+
+	if bucket == nil {
+		client,err := oss.New(endpoint,accessKeyId,accessKeySecret);
+
+		if err != nil {
+			return err;
+		}
+
+		bucket,err = client.Bucket(bucketName);
+
+		if err != nil {
+			return err;
+		}
+	}
+
+	isExist,err := bucket.IsObjectExist(saveObjectKey);
+	if isExist {
+		return errors.New("已存在，不需要上传");
+	}
+
+	resp,err := http.Get(resourcePath);
+	if err != nil {
+		return err;
+	}
+
+	if resp.StatusCode != 200 {
+		return errors.New("网络访问失败")
+	}
+
+	contentType := resp.Header["Content-Type"]
+	if len(contentType) == 1 && contentType[0] == "text/html; charset=utf-8" {
+		return errors.New("资源类型异常，不能使用")
+	}
+	// 获取文件流
+	err = bucket.PutObject(saveObjectKey,resp.Body);
+
+    return err;
 }

@@ -13,3 +13,5 @@ const APIURL_Content_Lesson_downloadMediaList = "/api/admin/tool/content/lesson/
 const APIURL_Content_Lesson_CheckCourseList = "/api/tool/content/lesson/checkCourseList"             //待检测课程列表
 const APIURL_Content_Lesson_CheckListWithLessons  = "/api/admin/tool/content/lesson/checkMediaList"  //课程待检查的lesson列表
 const APIURL_Content_Lesson_UpdateCheckStatus  = "/api/admin/tool/content/lesson/updateCheckStatus"  //更新Lesson检查状态
+
+const APIURL_Tool_FMedia = "/api/tool/fmedia"      // 获取非课件资源路径（用户头像/课程封面）
