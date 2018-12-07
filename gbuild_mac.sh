@@ -27,6 +27,7 @@ echo "cine_course_download.go 编译完成"；
 echo "开始编译cine_tools.go";
 cine_tools_path="${buildPath}/cien_tools";
 mkdir ${cine_tools_path};
+cp ${basePath}/config/cine_tools.cfg ${cine_tools_path};
 go build -o ${cine_tools_path}/cine_tools ${basePath}/src/cine_tools.go;
 echo "cine_tools.go 编译完成";
 
