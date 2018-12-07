@@ -14,7 +14,7 @@ const ConfFileTmp = "assets/cine_tools_tmp.cfg" //临时配置文件
 
 //API 配置
 const API_BASE_URL = "http://www.bstcine.com"
-const API_BASE_URL_TEST = "http://dev.bstcine.com"
+const API_BASE_URL_TEST = "https://dev.bstcine.com"
 const API_BASE_URL_LOCAL = "http://local.bstcine.com:9000"
 
 const Media_Host_KJ = "oss.bstcine.com"

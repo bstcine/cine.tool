@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"errors"
+	"strings"
+	"io"
+	"bytes"
 )
 
 /// 下载oss上的资源
@@ -257,12 +260,14 @@ func PutFile(resourcePath string,endpoint string, accessKeyId string, accessKeyS
 		client,err := oss.New(endpoint,accessKeyId,accessKeySecret);
 
 		if err != nil {
+			fmt.Println("client",err)
 			return err;
 		}
 
 		bucket,err = client.Bucket(bucketName);
 
 		if err != nil {
+			fmt.Println("bucket",err)
 			return err;
 		}
 	}
@@ -271,22 +276,33 @@ func PutFile(resourcePath string,endpoint string, accessKeyId string, accessKeyS
 	if isExist {
 		return errors.New("已存在，不需要上传");
 	}
+	var resourceData io.Reader
+	if strings.Contains(resourcePath, "http") {
+		resp,err := http.Get(resourcePath);
+		if err != nil {
+			fmt.Println("get: ",err)
+			return err;
+		}
 
-	resp,err := http.Get(resourcePath);
-	if err != nil {
-		return err;
-	}
+		if resp.StatusCode != 200 {
+			return errors.New("网络访问失败")
+		}
 
-	if resp.StatusCode != 200 {
-		return errors.New("网络访问失败")
-	}
-
-	contentType := resp.Header["Content-Type"]
-	if len(contentType) == 1 && contentType[0] == "text/html; charset=utf-8" {
-		return errors.New("资源类型异常，不能使用")
+		contentType := resp.Header["Content-Type"]
+		if len(contentType) == 1 && contentType[0] == "text/html; charset=utf-8" {
+			return errors.New("资源类型异常，不能使用")
+		}
+		resourceData = resp.Body
+	}else {
+		bytesReader,err := ioutil.ReadFile(resourcePath)
+		if err != nil {
+			fmt.Println("读取文件失败: ",err)
+			return err
+		}
+		resourceData = bytes.NewReader(bytesReader)
 	}
 	// 获取文件流
-	err = bucket.PutObject(saveObjectKey,resp.Body);
-
+	err = bucket.PutObject(saveObjectKey,resourceData);
+	fmt.Println(err)
     return err;
 }

@@ -7,11 +7,12 @@ import (
 	"image/jpeg"
 	"encoding/json"
 	"../model"
+	"runtime"
+	"strings"
 )
+// 需要提供4个对外方法
 
-// 需要提供八个对外方法
-
-/// 1.单个图片+指定时间 => 无声的ts文件
+/// 1.单个图片+音频 => ts文件
 /**
  @ param imagepath 图片地址
  @ param duration 生成ts视频时长
@@ -19,14 +20,15 @@ import (
  @ param mediaModel 合成的视频参数设置信息
  @ return 合成结果
  */
-func CreatVideoMpegtsWithImage(imagePath string, duration int,targetPath string, defaultFPS bool, mediaModel model.MediaConfig) bool {
-
+func CreateTsWithImageAudio(imagePath string, audioPath string, targetPath string, mediaModel model.MediaConfig) bool {
+	imagePath = dealPath(imagePath)
+	audioPath = dealPath(audioPath)
+	targetPath = dealPath(targetPath)
 	var rate = mediaModel.Rate
-
-	if !defaultFPS && rate == 1 {
+	if rate == 1 {
 		rate = 25
 	}
-
+	var duration = GetDuration(audioPath)
 	frameX,frameY := videoImageFrame(imagePath,int(mediaModel.Width),int(mediaModel.Height))
 	frameXStr := strconv.Itoa(frameX)
 	frameYStr := strconv.Itoa(frameY)
@@ -34,48 +36,115 @@ func CreatVideoMpegtsWithImage(imagePath string, duration int,targetPath string,
 	videoHeight := strconv.Itoa(int(mediaModel.Height))
 
 	rataLine := " -r " + strconv.Itoa(rate)
-	inputFileLine := " -i " + "\"" + imagePath + "\""
-	vcodeLine := " -vcodec libx264 -pix_fmt " + mediaModel.Pix
+	loopLine := " -f image2 -loop 1"
+	imageLine := " -i \"" + imagePath + "\""
+	audioLine := " -i \"" + audioPath + "\""
+	vcodecLine := " -vcodec libx264 -x264-params \"profile=" +
+		mediaModel.Profile + ":level=" + mediaModel.Level + "\"" +
+		" -flags +ildct+ilme -pix_fmt " + mediaModel.Pix
 	durationLine := " -t " + strconv.Itoa(duration)
+	//sizeAspect := " -s 1920*1080 -aspect 16:9"
 	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
 	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
-	outputPath := " -y -f mpegts " + "\"" + targetPath + "\""
-	lines := "ffmpeg" + rataLine + " -f image2 -loop 1" + inputFileLine + vcodeLine + durationLine + vfScaleLine + vfPadLine + outputPath
-
-	_,err := RunCMD(lines)
-
+	acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
+	outPutLine := " -y -f mpegts \"" + targetPath + "\""
+	runLine := "ffmpeg" +rataLine + loopLine + imageLine + audioLine +
+		vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
+	_,err := RunCMD(runLine)
+	if err != nil {
+		fmt.Println(runLine)
+		fmt.Println(err)
+	}
 	return err == nil
 }
 
-/// 2.音频文件mp3生成ts文件
-/**
- @ param audioPath 音频文件路径
- @ param savePath 生成的ts文件保存路径
- @ return 执行结果
- */
-func CreatAudioMpegtsWithMP3(audioPath string, savePath string) bool {
+/// 多个图片+音频合成ts文件
+func CreateMpegtsWithImagesAudio(images []map[string]string, tmpDir string, audioPath string, targetPath string, mediaModel model.MediaConfig) bool {
+	audioPath = dealPath(audioPath)
+	targetPath = dealPath(targetPath)
+	tmpDir = dealPath(tmpDir)
 
-	inputFileLine := " -i " + "\"" + audioPath + "\""
+	var rate = mediaModel.Rate
+	if rate == 1 {
+		rate = 25
+	}
+	rataLine := " -r " + strconv.Itoa(rate)
+	frameX,frameY := videoImageFrame(images[0]["path"], int(mediaModel.Width), int(mediaModel.Height))
+	frameXStr := strconv.Itoa(frameX)
+	frameYStr := strconv.Itoa(frameY)
+	videoWidth := strconv.Itoa(int(mediaModel.Width))
+	videoHeight := strconv.Itoa(int(mediaModel.Height))
 
-	acodecLine := " -acodec mp2 -vn -ar 44100 -ac 2 -ab 128K -f mpegts"
+	// 创建input.txt文件
+	var mpegtsTmpPaths []string
+	for index,imageMap := range images {
+		imagePath := imageMap["path"]
+		imagePath = dealPath(imagePath)
+		//fileInfo := "file '" + imagePath + "'\n"
+		//durationInfo := "duration " + imageMap["duration"] + "\n"
+		pathComponet := strings.Split(imagePath, "/")
+		imageComponent := pathComponet[len(pathComponet) - 1]
+		imageNameComponent := strings.Split(imageComponent,".")
+		cancelType := imageNameComponent[0]
+		nameComponent := strings.Split(cancelType,"_")
+		name := nameComponent[0]
+		startTime := nameComponent[len(nameComponent)-1]
+		var tmpIndex string
+		if index < 10  {
+			tmpIndex = name + "_00" + strconv.Itoa(index) + ".ts"
+		}else if index < 100 {
+			tmpIndex = name + "_0" + strconv.Itoa(index) + ".ts"
+		}
+		tmpPath := tmpDir + "/" + tmpIndex
+		mpegtsTmpPaths = append(mpegtsTmpPaths, tmpPath)
+		//AppendStringToFile(fileName, fileInfo)
+		//AppendStringToFile(fileName, durationInfo)
+		duration := imageMap["duration"]
 
-	outputPath := " -y " + "\"" + savePath + "\""
+		loopLine := " -f image2 -loop 1"
+		imageLine := " -i \"" + imagePath + "\""
+		audioLine := " -i \"" + audioPath + "\""
+		startLine := " -ss " + startTime
+		vcodecLine := " -vcodec libx264 -x264-params \"profile=" +
+			mediaModel.Profile + ":level=" + mediaModel.Level + "\"" +
+			" -flags +ildct+ilme -pix_fmt " + mediaModel.Pix
+		durationLine := " -t " + duration
+		fmt.Println("startTime: ", startLine)
+		fmt.Println("duration: ",duration)
+		//sizeAspect := " -s 1920*1080 -aspect 16:9"
+		vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
+		vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
+		acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
+		outPutLine := " -y -f mpegts \"" + tmpPath + "\""
+		imageRunLine := "ffmpeg" +rataLine + loopLine + imageLine + audioLine + startLine +
+			vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
+		fmt.Println(imageRunLine)
+		_,err := RunCMD(imageRunLine)
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+	}
+	fmt.Println("图片处理完成了，准备合成整个视频")
+	componseSuc := ComponseMpegts(mpegtsTmpPaths,targetPath,mediaModel)
 
-	line := "ffmpeg" + inputFileLine + acodecLine + outputPath
-
-	_,err := RunCMD(line)
-
-	return  err == nil
+	return componseSuc
 }
 
-/// 3.视频文件提取视频源ts文件
+/// 2. mp4 文件转换为 ts 文件
 /**
- @param videoPath 待提取的视频文件路径
- @param savePath 提取出的视频源路径
+ @param videoPath MP4文件路径
+ @param savePath ts路径
  @param mediaModel 待提取视频参数
  @return 提取结果
  */
 func CreatVideoMpegtsWithMP4(videoPath string, savePath string, mediaModel model.MediaConfig) bool {
+	videoPath = dealPath(videoPath)
+	savePath = dealPath(savePath)
+	duration := GetDuration(videoPath)
+	if duration <= 0 {
+		fmt.Println("视频时长异常", duration)
+	}
 
 	frameX,frameY := videoMP4Frame(videoPath,int(mediaModel.Width),int(mediaModel.Height))
 	frameXStr := strconv.Itoa(frameX)
@@ -84,90 +153,67 @@ func CreatVideoMpegtsWithMP4(videoPath string, savePath string, mediaModel model
 	videoHeight := strconv.Itoa(int(mediaModel.Height))
 
 	inputFileLine := " -i " + "\"" + videoPath + "\""
-	vcodecLine := " -vcodec libx264 -pix_fmt yuv420p"
-	vfScaleLine := " -an -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
+	vcodecLine := " -vcodec libx264 -x264-params \"profile=" +
+		mediaModel.Profile + ":level=" + mediaModel.Level + "\"" +
+		" -flags +ildct+ilme -pix_fmt " + mediaModel.Pix
+	durationLine := " -t " + strconv.Itoa(duration)
+	//sizeAspect := " -s 1920*1080 -aspect 16:9"
+	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
 	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
-	outputPath := " -y " + "\"" + savePath + "\""
+	acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
+	outputPath := " -y -f mpegts \"" + savePath + "\""
 
-	line := "ffmpeg" + inputFileLine + vcodecLine + vfScaleLine + vfPadLine + outputPath
+	line := "ffmpeg " + inputFileLine + vcodecLine + durationLine +
+		vfScaleLine + vfPadLine + acodecLine + outputPath
 
 	_,err := RunCMD(line)
+	if err == nil {
+		fmt.Println(line)
+		fmt.Println(err)
+	}
 
 	return err == nil
 }
 
-/// 3.视频文件提取音频源ts文件
-/**
- @param videoPath 待提取的视频文件路径
- @param savePath 提取后的音频源路径
- @return 提取结果
- */
-func CreatAudioMpegtsWithMP4(videoPath string, savePath string) bool {
-
-	inputFileLine := " -i " + "\"" + videoPath + "\""
-
-	acodecLine := " -acodec mp2 -vn -ar 44100 -ac 2 -ab 128K -f mpegts"
-
-	outputPath := " -y " + "\"" + savePath + "\""
-
-	line := "ffmpeg" + inputFileLine + acodecLine + outputPath
-
-	_,err := RunCMD(line)
-
-	return  err == nil
-}
-
-/// 4.将一组ts文件合成为一个ts文件
+/// 3.将一组ts文件合成为一个ts文件
 /**
  @param mepgtsArr 待合成的源文件路径集合
  @param targetPath 合成后的资源文件路径
  @return 合成结果
  */
-func ComponseMpegts(mpegtsArr []string,targetPath string) bool {
+func ComponseMpegts(mpegtsArr []string,targetPath string,mediaModel model.MediaConfig) bool {
 
+	targetPath = dealPath(targetPath)
 	if len(mpegtsArr) <= 1 {
 		fmt.Println("待合并文件不超过一个，不需要执行合并操作")
 		return  false
 	}
-
+	var rate = mediaModel.Rate
+	if rate == 1 {
+		rate = 25
+	}
 	var mpegtsConcat = ""
 	for _,mpeg := range mpegtsArr {
-
+		mpeg = dealPath(mpeg)
 		if mpegtsConcat == "" {
 			mpegtsConcat = "concat:"+mpeg
 		}else {
 			mpegtsConcat = mpegtsConcat + "|" + mpeg
 		}
 	}
-
 	inputFileLine := " -i " + "\"" + mpegtsConcat + "\""
-	vcodeLine := " -c copy"
-	lines := "ffmpeg" + inputFileLine + vcodeLine + " -y " + "\"" + targetPath + "\""
+	vcodecLine := " -vcodec libx264 -x264-params \"profile=" +
+		mediaModel.Profile + ":level=" + mediaModel.Level + "\"" +
+		" -flags +ildct+ilme -pix_fmt " + mediaModel.Pix + " -s 1920*1080 -aspect 16:9"
+	acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
+	lines := "ffmpeg" + inputFileLine + vcodecLine + acodecLine + " -y -f mpegts " + "\"" + targetPath + "\""
 
 	_,err := RunCMD(lines)
+	if err != nil {
 
-	return err == nil
-}
-
-/// 5.将一个视频源和一个音频源合成一个包含视频与音频的ts文件
-/**
- @param videoPath 视频源路径
- @param audioPath 音频源路径
- @param savePath 合成后的ts文件路径
- @return 合成结果
- */
-func CreatMpegtsWithAudioAndVideo(videoPath string ,audioPath string, savePath string) bool {
-
-	videoLine := " -i " + "\"" + videoPath + "\""
-
-	audioLine := " -i " + "\"" + audioPath + "\""
-
-	outputPath := " -y " + "\"" + savePath + "\""
-
-	line := "ffmpeg" + videoLine + audioLine + " -c copy" + outputPath
-
-	_,err := RunCMD(line)
-
+		fmt.Println(lines)
+		fmt.Println(err)
+	}
 	return err == nil
 }
 
@@ -184,7 +230,7 @@ func CreatMp4WithMpegts(avPath string, savePath string, mediaModel model.MediaCo
 
 	vcodeLine := " -vcodec libx264 -x264-params \"profile="+mediaModel.Profile+":level=" + mediaModel.Level + "\" -pix_fmt " + mediaModel.Pix
 
-	acodecLine := " -acodec aac"
+	acodecLine := " -acodec copy"
 
 	maxPacketLine := " -max_muxing_queue_size 9999"
 
@@ -333,6 +379,7 @@ func JudgeDurationEqual(firstPath string, secondPath string) bool {
  */
 func GetDuration(audioPath string) int {
 
+	audioPath = dealPath(audioPath)
 	res,err := GetJsonFileInfo(audioPath)
 
 	if err != nil {
@@ -357,4 +404,12 @@ func GetDuration(audioPath string) int {
 	}
 
 	return int(duration)
+}
+var osType = runtime.GOOS
+func dealPath(originPath string) string {
+	if osType == "windows" {
+		newPath := strings.Replace(originPath,"/","\\",-1)
+		return newPath
+	}
+	return originPath
 }

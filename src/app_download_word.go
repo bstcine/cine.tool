@@ -45,15 +45,15 @@ func GetFiles(courseId, getCourseFileApi string) Result {
 func main() {
 	fmt.Println("欢迎使用课程习题与单词下载工具....")
 
-	isdebug := false
+	isdebug := true
 
 	var outPutPath string
 	var getCourseFileApi string
 	var courseId string
 
 	if isdebug {
-		outPutPath = "/Volumes/Go/test/习题单词库/"
-		getCourseFileApi = "http://apptest.bstcine.com/api/tool/content/course/exerciseWord"
+		outPutPath = "/Users/lidangkun/Desktop/未命名文件夹/app/习题单词库/"
+		getCourseFileApi = "http://dev.bstcine.com/api/tool/content/course/exerciseWord"
 		os.MkdirAll(outPutPath, 0777)
 	} else {
 		outPutPath = utils.GetCurPath() + string(os.PathSeparator) + "习题单词库" + string(os.PathSeparator)
@@ -79,7 +79,9 @@ func main() {
 				os.MkdirAll(downPath, 0777)
 			}
 
-			utils.DownloadFile(downPath+file.Name, file.Path)
+			fmt.Println(downPath+file.Name)
+			fmt.Println(file.Path)
+			utils.DownloadFile(file.Path, downPath+file.Name)
 		}
 	}
 }
