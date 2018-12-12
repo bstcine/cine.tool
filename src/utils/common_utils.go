@@ -49,6 +49,7 @@ func GenerateRandomNumber(start int, end int, count int) []int {
 	}
 	return nums
 }
+/***/
 
 /// 清理字典中的所有值的指定字符（如空格键，','等）
 func ClearDictionaryChar(dict map[string]string, char string){

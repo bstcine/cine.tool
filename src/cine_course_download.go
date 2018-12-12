@@ -115,7 +115,7 @@ func main() {
 		errorLogPath = oss_download_errorLog_debug
 	}else {
 		dir,err := filepath.Abs(filepath.Dir(os.Args[0]))
-
+		fmt.Println(dir)
 		if err != nil {
 			return
 		}

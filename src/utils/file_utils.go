@@ -211,6 +211,7 @@ func WriteLines(lines []string, path string) error {
 */
 func GetJsonFileInfo(url string) (json string,err error) {
 	var cmd = "ffprobe -v quiet -print_format json -show_format " + "\"" + url + "\""
+	fmt.Println(cmd)
 	result, err := RunCMD(cmd)
 	return result, err
 }
@@ -221,6 +222,7 @@ func GetJsonFileInfo(url string) (json string,err error) {
 func GetJsonFileIndoVideo(url string) (map[string]interface{}, error) {
 
 	var cmd= "ffprobe \"" + url + "\" -print_format json -show_streams -select_streams v -hide_banner -v quiet"
+	fmt.Println(cmd)
 	result, err := RunCMD(cmd)
 	if err != nil {
 		return nil,err
@@ -286,6 +288,8 @@ func PrintDownloadPercent(done chan int64, path string, total int64) {
 func DownloadFile(url string, outPath string) bool {
 
 	dirPath := outPath[0:strings.LastIndex(outPath,"/")+1]
+	fmt.Println("起始url: ", url)
+	fmt.Println("保存目录: ",dirPath)
 	if _, err := os.Stat(dirPath); err != nil {
 		os.MkdirAll(dirPath, 0777)
 	}
@@ -305,7 +309,7 @@ func DownloadFile(url string, outPath string) bool {
 		panic(err)
 		return false
 	}
-
+	fmt.Println("下载url: ", url)
 	headResp, err := http.Head(url)
 
 	defer headResp.Body.Close()
