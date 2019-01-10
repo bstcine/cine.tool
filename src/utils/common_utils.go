@@ -180,7 +180,25 @@ func GetAllFiloeNames(dirPath string) []string{
 	fmt.Println("所有文件名称如下: \n",tempNames)
 	return fileNames
 }
+func GetAllMp4FileeNames(dirPath string) (dirNames []string, fileNames []string) {
 
+	fileHandler,err := ioutil.ReadDir(dirPath)
+
+	if err != nil {
+		return nil,nil
+	}
+
+	for _,file := range fileHandler {
+		if file.IsDir() {
+			dirNames = append(dirNames, file.Name())
+			continue
+		}
+		if strings.HasSuffix(file.Name(), ".mp4") {
+			fileNames = append(fileNames,file.Name())
+		}
+	}
+	return dirNames,fileNames
+}
 /// 获取目录下的所有mp3文件名
 func GetAllMp3FiloeNames(dirPath string) (hadVideo bool, fileNames []string){
 

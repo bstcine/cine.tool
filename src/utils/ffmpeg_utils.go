@@ -12,6 +12,81 @@ import (
 )
 // 需要提供4个对外方法
 
+/// 单张图片合成为无声视频
+func CreateTsWithImage(imagePath string, duration int, rate int, width int, height int, targetPath string) bool {
+	imagePath = dealPath(imagePath)
+	targetPath = dealPath(targetPath)
+
+	frameX,frameY := videoImageFrame(imagePath,width,height)
+	frameXStr := strconv.Itoa(frameX)
+	frameYStr := strconv.Itoa(frameY)
+	videoWidth := strconv.Itoa(width)
+	videoHeight := strconv.Itoa(height)
+
+	rataLine := " -r " + strconv.Itoa(rate)
+	loopLine := " -f image2 -loop 1"
+	imageLine := " -i \"" + imagePath + "\""
+
+	vcodecLine := " -vcodec libx264 -x264-params \"profile=high:level=3.0\" -flags +ildct+ilme -pix_fmt yuv420p"
+	durationLine := " -t " + strconv.Itoa(duration)
+	vfScaleLine := " -vf scale=" + videoWidth + ":" + videoHeight + ":force_original_aspect_ratio=decrease,"
+	vfPadLine := "pad="+ videoWidth + ":" + videoHeight + ":" + frameXStr + ":" + frameYStr
+	acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
+	outPutLine := " -y -f mpegts \"" + targetPath + "\""
+
+	runLine := "ffmpeg" +rataLine + loopLine + imageLine +
+		vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
+	_,err := RunCMD(runLine)
+	if err != nil {
+		fmt.Println(runLine)
+		fmt.Println(err)
+	}
+	return err == nil
+}
+/// MP4视频转换为Ts(不编码，直接拷贝)
+func CreateTsWithMp4(mp4 string, targetPath string) bool {
+	runLine := "ffmpeg -i \"" + mp4 + "\" -vcodec copy -acodec copy -y \"" + targetPath + "\""
+	_,err := RunCMD(runLine)
+	if err != nil {
+		fmt.Println(runLine)
+		fmt.Println(err)
+	}
+	return err == nil
+}
+/// ts转换为MP4(不编码，字节拷贝)
+func ComponseMP4WithTs(mpegtsArr []string, targetPath string) bool {
+	tmpTarget := targetPath + "_tmp.ts"
+	var mpegtsConcat = ""
+	for _,mpeg := range mpegtsArr {
+		mpeg = dealPath(mpeg)
+		if mpegtsConcat == "" {
+			mpegtsConcat = "concat:"+mpeg
+		}else {
+			mpegtsConcat = mpegtsConcat + "|" + mpeg
+		}
+	}
+	runLine := "ffmpeg -i \"" + mpegtsConcat + "\" -vcodec copy -acodec copy -y \"" + tmpTarget + "\""
+	fmt.Println(runLine)
+	_,err := RunCMD(runLine)
+	if err != nil {
+		fmt.Println(runLine)
+		fmt.Println(err)
+	}
+	// 将临时文件转换为MP4
+	targetRunLine := "ffmpeg -i \"" + tmpTarget + "\" -vcodec libx264 " +
+		"-acodec aac -ar 48000 -ac 2 -ab 480k -strict -2 -y \"" +
+		targetPath + "\""
+	_,err = RunCMD(targetRunLine)
+
+	fmt.Println(targetRunLine)
+	if err != nil {
+		fmt.Println(runLine)
+		fmt.Println(err)
+	}
+	os.Remove(tmpTarget)
+	return err == nil
+}
+
 /// 1.单个图片+音频 => ts文件
 /**
  @ param imagepath 图片地址

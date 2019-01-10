@@ -87,9 +87,10 @@ func dealDirectory(dirPath string,savePath string) {
 	}else {
 		// 获取目录中的所有目录，递归访问
 		dirNames := utils.GetAllDirectoryNames(dirPath)
+		fmt.Println("获取目录内容: \n", dirNames)
 
 		if len(dirNames) == 0 {
-
+			fmt.Println("文件内容为空, 开始下一个")
 			return
 		}
 

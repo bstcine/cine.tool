@@ -20,6 +20,19 @@ func ReadXLSX(path string) [][]string{
 	return newRows
 }
 
+func ReadXLSXWithName(path string, name string) [][]string{
+	xlsxFile, err := excelize.OpenFile(path)
+	if err != nil {
+		fmt.Println(err)
+	}
+	rows := xlsxFile.GetRows(name);
+	if rows == nil || len(rows) == 0 {
+		return nil
+	}
+	newRows := rows[1:]
+	return newRows
+}
+
 func CreateXLMS(path string, keys []string) (*excelize.File, error) {
 	xlsx := excelize.NewFile()
 	for index,key := range keys {
