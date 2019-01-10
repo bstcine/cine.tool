@@ -1,5 +1,23 @@
 # cine.tool
 - ## Setup
+
+```
+前置任务: 打开终端
+1. 在程序坞(底部程序栏)中点击LaunchPad，选择 "其他"文件夹，即可找到"终端"程序，点击即可运行
+
+
+第一步: 安装homebrew，在下面的指令行拷贝到终端中，敲击 enter 键执行
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+第二步: 安装成功后，继续安装 ffmpeg，将下面的指令行拷贝到终端中，敲击 enter 键执行
+brew install ffmpeg
+
+第三部：安装结束后，将下面的指令行拷贝到终端中，敲击enter键执行
+ffmpeg -version
+
+至此，即可显示ffmpeg的相关信息，表示安装成功
+```
+
 ```shell
 $ git clone https://github.com/bstcine/cine.tool.git
 $ cd cine.tool
