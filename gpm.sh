@@ -5,4 +5,4 @@ go get github.com/nfnt/resize;
 go get github.com/aliyun/aliyun-oss-go-sdk/oss;
 go get github.com/Luxurioust/excelize;
 go get github.com/tealeg/xlsx;
-echo "<== 第三方库准备完毕"；
+echo "<== 第三方库准备完毕";

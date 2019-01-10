@@ -2,28 +2,29 @@ package main
 
 import (
 	"./utils"
+	"bytes"
 	//"path/filepath"
 	//"os"
 	//"strings"
 	"fmt"
-	"strings"
 	"os"
 	"path/filepath"
-	"bytes"
+	"strings"
 )
 
 var imageName string = "000.png"
+var audioName string = "000.mp3"
 var saveName string = "Target"
 
 func main() {
 
-	dir,err := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	if err != nil {
 		return
 	}
 	fmt.Println(dir)
-	componse_workdir := strings.Replace(dir,"\\","/",-1)
+	componse_workdir := strings.Replace(dir, "\\", "/", -1)
 
 	componseConfig := componse_workdir + "/cine_media_mp4_append.cfg"
 	fmt.Println(componseConfig)
@@ -37,7 +38,8 @@ func main() {
 	appendTsPath := temporaryPath + "/temporary.ts"
 	// 将图片合成能为无声的音频
 	imagePath := componse_workdir + "/" + imageName
-	utils.CreateTsWithImage(imagePath,5,25,1920,1080,appendTsPath)
+	audioPath := componse_workdir + "/" + audioName
+	utils.CreateTsWithImage(imagePath, audioPath, 5, 25, 1920, 1080, appendTsPath)
 
 	// 创建目标地址
 	targetDir := componse_workdir + "/" + saveName
@@ -52,12 +54,12 @@ func main() {
 	}
 	fmt.Println(sourcePaths)
 
-	for _,mp4Name := range sourcePaths {
+	for _, mp4Name := range sourcePaths {
 
 		tmpTs := componse_workdir + "/temporary/" + mp4Name
 		tmpTs = strings.Replace(tmpTs, ".mp4", ".ts", -1)
 
-		isSuc := utils.CreateTsWithMp4(componse_workdir + "/" + mp4Name, tmpTs)
+		isSuc := utils.CreateTsWithMp4(componse_workdir+"/"+mp4Name, tmpTs)
 		if !isSuc {
 			fmt.Println("转换失败，", mp4Name)
 			continue
@@ -66,7 +68,7 @@ func main() {
 		var mpegtsArr []string
 		mpegtsArr = append(mpegtsArr, tmpTs)
 		mpegtsArr = append(mpegtsArr, appendTsPath)
-		isSuc = utils.ComponseMP4WithTs(mpegtsArr,savePath)
+		isSuc = utils.ComponseMP4WithTs(mpegtsArr, savePath)
 		if !isSuc {
 			fmt.Println("合成失败")
 		}
@@ -86,11 +88,11 @@ func scanDirectory(dirPath string, name string, componse_workdir string) []strin
 
 	// 将所有MP4文件拷贝到数组中
 	if mp4Names != nil && len(mp4Names) > 0 {
-		for _,mp4Name := range mp4Names {
+		for _, mp4Name := range mp4Names {
 			if name == "" {
 				sourcePaths = append(sourcePaths, mp4Name)
-			}else {
-				sourcePaths = append(sourcePaths, name + "/" + mp4Name)
+			} else {
+				sourcePaths = append(sourcePaths, name+"/"+mp4Name)
 			}
 		}
 	}
@@ -98,10 +100,10 @@ func scanDirectory(dirPath string, name string, componse_workdir string) []strin
 	if len(dirNames) == 0 {
 		return sourcePaths
 	}
-	cachePath := strings.Replace(dirPath,componse_workdir,"", -1)
-	cachePath = strings.Replace(cachePath," ","",-1)
+	cachePath := strings.Replace(dirPath, componse_workdir, "", -1)
+	cachePath = strings.Replace(cachePath, " ", "", -1)
 
-	for _,dirName := range dirNames {
+	for _, dirName := range dirNames {
 		if dirName == saveName || dirName == "temporary" {
 			continue
 		}
@@ -119,7 +121,7 @@ func scanDirectory(dirPath string, name string, componse_workdir string) []strin
 			newTmpPathBuffer.WriteString(componse_workdir)
 			newTmpPathBuffer.WriteString("/temporary/")
 			newTmpPathBuffer.WriteString(dirName)
-		}else {
+		} else {
 
 			newPathBuffer.WriteString(componse_workdir)
 			newPathBuffer.WriteString("/")
