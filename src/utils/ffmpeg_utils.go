@@ -26,6 +26,7 @@ func CreateTsWithImage(imagePath string, duration int, rate int, width int, heig
 	rataLine := " -r " + strconv.Itoa(rate)
 	loopLine := " -f image2 -loop 1"
 	imageLine := " -i \"" + imagePath + "\""
+	"-i audioPath"
 
 	vcodecLine := " -vcodec libx264 -x264-params \"profile=high:level=3.0\" -flags +ildct+ilme -pix_fmt yuv420p"
 	durationLine := " -t " + strconv.Itoa(duration)

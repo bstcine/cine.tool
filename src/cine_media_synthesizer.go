@@ -62,6 +62,16 @@ func main() {
 	if !readResult {
 		return
 	}
+	if mediaConfgiModel.IsAd {
+		// 合成追加的ts,放置到临时目录中，待使用
+		adDir := componse_workdir + "/AD/tmp"
+		if !utils.Exists(adDir) {
+			utils.CreatDirectory(adDir)
+		}
+		adTmpTs := adDir + "/tmp.ts"
+
+		//utils.CreateTsWithImageAudio()
+	}
 
 	// 生成保存文件夹MP4
 	savePath := componse_workdir + "/MP4"
@@ -492,6 +502,7 @@ func readMediaSynthesuzerConfig(path string) (bool) {
 		"baseline",
 		"3.0",
 		"yuv420p",
+		false,
 	}
 
 	fmt.Println("开始读取配置文件: ",path)
@@ -512,6 +523,9 @@ func readMediaSynthesuzerConfig(path string) (bool) {
 		}
 		if configArg["isTs"] == "true" {
 			configModel.IsTs = true
+		}
+		if configArg["IsAd"] == "true" {
+			configModel.IsAd = true
 		}
 		rate,isInt := utils.JudgeIsInt(configArg["rate"])
 		if isInt && rate > 0 {

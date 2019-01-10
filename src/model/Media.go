@@ -12,6 +12,7 @@ type MediaConfig struct {
 	Profile string        // 配置属性profile
 	Level string          // 配置属性level
 	Pix string            // 配置属性fix_fmt
+	IsAd bool             // 是否追加广告
 }
 
 type DownloadConfig struct {
