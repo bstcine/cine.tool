@@ -93,4 +93,7 @@ $ ./gbuild_mac.sh
     - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/config,
         /build/cine_media_synthesizer/cine_media_synthesizer, 三个文件拷贝到同一个目录下。
     - 2.点击执行 cine_course_download，课件下载成功后，点击执行cine_media_synthesizer 即可。
+    注意: 第一次执行合成的时候，需要执行以下语句
+    $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    $ brew install ffmpeg
     ```
