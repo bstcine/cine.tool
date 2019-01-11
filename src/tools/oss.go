@@ -565,6 +565,9 @@ func (tools Tools) imgProcessSave(objKey, newObjKey, process string) (string, er
 	tools.signHeader(req, "/static-bstcine/"+objKey+"?x-oss-process")
 
 	resp, err := client.Do(req)
+	if(err != nil) {
+		return "", err
+	}
 
 	defer resp.Body.Close()
 
