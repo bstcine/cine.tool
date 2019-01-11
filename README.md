@@ -94,16 +94,18 @@ $ ./gbuild_mac.sh
     ```
      $ ./gpm.sh
      $ mkdir build
-     $ cp config/cine_course_download.cfg build/cine_course_download.cfg
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_download.exe src/cine_course_download.go
+     $ mkdir build/cine_course_download
+     $ cp config/cine_course_download.cfg build/cine_course_download/cine_course_download.cfg
+     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_download/cine_course_download.exe src/cine_course_download.go
     ```
   
   - Mac
     ```
      $ ./gpm.sh
      $ mkdir build
-     $ cp config/cine_course_download.cfg build/cine_course_download.cfg
-     $ go build -o build/cine_course_download src/cine_course_download.go
+     $ mkdir build/cine_course_download
+     $ cp config/cine_course_download.cfg build/cine_course_download/cine_course_download.cfg
+     $ go build -o build/cine_course_download/cine_course_download src/cine_course_download.go
     ```
 
 - ### 音视频合成
