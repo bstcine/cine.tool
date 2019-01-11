@@ -84,6 +84,27 @@ $ ./gbuild_mac.sh
      - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
      - 课件多媒体资源（音视频,水印图,原图）检查工具
      ```
+     
+- ### 课程资源下载（包括课程图片，音频，视频等学习资源，不包含课程封面等辅助资源）
+```
+如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
+```
+  - ### 构建
+  - Window(exe)
+  ```
+     $ ./gpm.sh
+     $ mkdir build
+     $ cp config/cine_course_download.cfg build/cine_course_download.cfg
+     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_download.exe src/cine_course_download.go
+  ```
+  
+  - Mac
+  ```
+     $ ./gpm.sh
+     $ mkdir build
+     $ cp config/cine_course_download.cfg build/cine_course_download.cfg
+     $ go build -o build/cine_course_download src/cine_course_download.go
+  ```
 
 - ### 音视频合成
   ```
