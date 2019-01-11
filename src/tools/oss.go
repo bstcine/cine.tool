@@ -176,12 +176,12 @@ func (tools Tools) MigrateObject() {
 
 		for a := 1; a <= rowCount; a++ {
 			msg := <-results
-			fmt.Printf("%s \n", msg)
+			fmt.Printf("%v \n", msg)
 
 			if msg.Error == nil {
-				migrateSuccessLogger.Printf("%s", msg)
+				migrateSuccessLogger.Printf("%v", msg)
 			} else {
-				migrateErrorLogger.Printf("%s", msg)
+				migrateErrorLogger.Printf("%v", msg)
 			}
 		}
 	}
