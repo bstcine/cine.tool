@@ -89,7 +89,7 @@ $ ./gbuild_mac.sh
 ```
 如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
 ```
-  - ### 构建
+  - #### 构建
   - Window(exe)
   ```
      $ ./gpm.sh
