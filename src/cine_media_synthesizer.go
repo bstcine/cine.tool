@@ -62,25 +62,35 @@ func main() {
 	if !readResult {
 		return
 	}
+	var adTmpTs string
 	if mediaConfgiModel.IsAd {
+		fmt.Println("添加推广图 true")
 		// 合成追加的ts,放置到临时目录中，待使用
 		adDir := componse_workdir + "/AD/tmp"
 		if !utils.Exists(adDir) {
 			utils.CreatDirectory(adDir)
 		}
-		adTmpTs := adDir + "/tmp.ts"
+		adTmpTs = adDir + "/tmp.ts"
 
-		//utils.CreateTsWithImageAudio()
+		imagePath := componse_workdir + "/AD/000.png"
+		audioPath := componse_workdir + "/AD/000.mp3"
+
+		res := utils.CreateTsWithImageAudio(imagePath, audioPath, adTmpTs, mediaConfgiModel)
+		if !res {
+			fmt.Println("推广图 ts 文件合成失败")
+			return
+		}
+		fmt.Println("推广图 ts 合成完毕")
 	}
 
 	// 生成保存文件夹MP4
 	savePath := componse_workdir + "/MP4"
 
 	// 处理工作目录
-	dealDirectory(componse_workdir, savePath)
+	dealDirectory(componse_workdir, savePath, adTmpTs)
 }
 
-func dealDirectory(dirPath string, savePath string) {
+func dealDirectory(dirPath string, savePath string, adTmpTs string) {
 
 	// 判断是否是LessonDirectory
 	dirComponents := strings.Split(dirPath, "/")
@@ -92,7 +102,7 @@ func dealDirectory(dirPath string, savePath string) {
 			fmt.Printf("%+v\n", audioModel)
 		}
 
-		startComponseVideoModel(videoModel)
+		startComponseVideoModel(videoModel, adTmpTs)
 		fmt.Println("lesson目录处理结束", dirPath)
 	} else {
 		// 获取目录中的所有目录，递归访问
@@ -106,10 +116,10 @@ func dealDirectory(dirPath string, savePath string) {
 
 		for _, dirName := range dirNames {
 
-			if dirName == "MP4" {
+			if dirName == "MP4" || dirName == "AD" {
 				continue
 			}
-			dealDirectory(dirPath+"/"+dirName, savePath+"/"+dirName)
+			dealDirectory(dirPath+"/"+dirName, savePath+"/"+dirName, adTmpTs)
 		}
 	}
 }
@@ -118,7 +128,7 @@ func dealDirectory(dirPath string, savePath string) {
 /**
 @param videomodel 合成视频模型
 */
-func startComponseVideoModel(videoModel componseVideo) bool {
+func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
 
 	var saveSuffix string
 	if mediaConfgiModel.IsTs {
@@ -156,7 +166,7 @@ func startComponseVideoModel(videoModel componseVideo) bool {
 	savePath := videoModel.SavePath + "/" + videoModel.DirName + ".mp4"
 
 	// 如果只有一个音频，则直接采用一个合成命令行
-	if len(videoModel.Audios) == 1 {
+	if len(videoModel.Audios) == 1 && !mediaConfgiModel.IsAd {
 
 		// 只有一个音频组
 		avTs := startComponseAudioToVideo(videoModel, videoModel.Audios[0])
@@ -199,6 +209,10 @@ func startComponseVideoModel(videoModel componseVideo) bool {
 		fmt.Println("lesson 音视频源已准备", index+1, "/", audioCount)
 
 		mpegtsAVArr = append(mpegtsAVArr, tmsTs)
+	}
+
+	if adTmpTs != "" {
+		mpegtsAVArr = append(mpegtsAVArr, adTmpTs)
 	}
 
 	fmt.Println("开始合并标准多媒体数据源...")
@@ -423,7 +437,6 @@ func dealLessonDirectory(dirPath string, saveDirPath string) (videoModel compons
 
 			}
 
-			audioImages = append(audioImages, imageModel)
 			audioModel.Images = audioImages
 		}
 
@@ -525,7 +538,7 @@ func readMediaSynthesuzerConfig(path string) bool {
 		if configArg["isTs"] == "true" {
 			configModel.IsTs = true
 		}
-		if configArg["IsAd"] == "true" {
+		if configArg["isAd"] == "true" {
 			configModel.IsAd = true
 		}
 		rate, isInt := utils.JudgeIsInt(configArg["rate"])
