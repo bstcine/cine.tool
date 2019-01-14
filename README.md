@@ -20,21 +20,21 @@ ffmpeg -version
 <br>
 
 # cine.tool
-- ## Setup
+## Setup
 
 ```shell
 $ git clone https://github.com/bstcine/cine.tool.git
 $ cd cine.tool
 ```
       
-- ## Build
+## Build
 
-- ### Build_mac_all
+### Build_mac_all
 ```
 $ ./gbuild_mac.sh
 ```
 
-- ### cine_tools
+### cine_tools
   - Window(exe)
      ```
      $ go get github.com/nfnt/resize
@@ -56,12 +56,12 @@ $ ./gbuild_mac.sh
      $ ./bin/cine_tools
      ```  
 
-     
-- ### 课程资源下载（包括图片&音频&视频等Lesson学习资源）
+<br>
+
+### 课程资源下载（包括图片&音频&视频等Lesson学习资源）
   ```
   如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
   ```
-  - #### 构建
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -80,11 +80,12 @@ $ ./gbuild_mac.sh
      $ go build -o build/cine_course_download/cine_course_download src/cine_course_download.go
     ```
 
+<br>
+
 - ### 音视频合成
   ```
   如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤，请看注意事项
   ```
-  - #### 构建
   - Window(exe)
     ```
      $ ./gpm.sh
