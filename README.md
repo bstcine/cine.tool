@@ -84,6 +84,29 @@ $ ./gbuild_mac.sh
      - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
      - 课件多媒体资源（音视频,水印图,原图）检查工具
      ```
+     
+- ### 课程资源下载（包括课程图片，音频，视频等学习资源，不包含课程封面等辅助资源）
+  ```
+  如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
+  ```
+  - #### 构建
+  - Window(exe)
+    ```
+     $ ./gpm.sh
+     $ mkdir build
+     $ mkdir build/cine_course_download
+     $ cp config/cine_course_download.cfg build/cine_course_download/cine_course_download.cfg
+     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_download/cine_course_download.exe src/cine_course_download.go
+    ```
+  
+  - Mac
+    ```
+     $ ./gpm.sh
+     $ mkdir build
+     $ mkdir build/cine_course_download
+     $ cp config/cine_course_download.cfg build/cine_course_download/cine_course_download.cfg
+     $ go build -o build/cine_course_download/cine_course_download src/cine_course_download.go
+    ```
 
 - ### 音视频合成
   ```
@@ -94,24 +117,30 @@ $ ./gbuild_mac.sh
     ```
      $ ./gpm.sh
      $ mkdir build
-     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer.cfg
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_media_synthesizer.exe src/cine_media_synthesizer.go
+     $ mkdir build/cine_media_synthesizer
+     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer/cine_media_synthesizer.cfg
+     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_media_synthesizer/cine_media_synthesizer.exe src/cine_media_synthesizer.go
     ```
 
   - Mac
     ```
      $ ./gpm.sh
      $ mkdir build
-     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer.cfg
-     $ go build -o build/cine_media_synthesizer src/cine_media_synthesizer.go
+     $ mkdir build/cine_media_synthesizer
+     $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer/cine_media_synthesizer.cfg
+     $ go build -o build/cine_media_synthesizer/cine_media_synthesizer src/cine_media_synthesizer.go
     ```
      
   - 使用：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
     ```
-    - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/config,
-        /build/cine_media_synthesizer/cine_media_synthesizer, 三个文件拷贝到同一个目录下。
-    - 2.点击执行 cine_course_download，课件下载成功后，点击执行cine_media_synthesizer 即可。
-    注意: 第一次执行合成的时候，需要执行以下语句
+    - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/cine_course_download.cfg,
+        /build/cine_media_synthesizer/cine_media_synthesizer, /build/cine_media_synthesizer/cine_media_synthesizer.cfg, 
+        四个文件拷贝到同一个目录下，并将cine_course_download.cfg, cine_media_synthesizer.cfg 按照需要完成配置信息。
+    - 2.点击执行 cine_course_download，待课件全部下载成功后，点击执行cine_media_synthesizer 即可开始合成。
+    - 3.待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
+    
+    
+    注意:  - 执行之前，需确认本地是否已安装ffmpeg（$ ffmpeg -version）
     $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
     $ brew install ffmpeg
     ```
