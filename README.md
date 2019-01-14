@@ -1,6 +1,6 @@
 
-- ## 前置任务: 预先安装ffmpeg
-```Terminal
+### 前置任务: 预先安装ffmpeg
+```shell
 第一步: 底部程序栏, 点击"Terminal"打开终端程序
 
 
@@ -56,40 +56,8 @@ $ ./gbuild_mac.sh
      $ ./bin/cine_tools
      ```  
 
-- ### 词汇习题下载工具
-  - Window(exe)
-     ```
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/app_download_word.exe src/app_download_word.go
-     ```
-  - Mac
-     ```
-     $ go build -o build/app_download src/app_download_word.go
-     ```
-      
-- ### 课程检查
-  - Window(exe)
-     ```
-     $ ./gpm.sh
-     $ mkdir build
-     $ cp config/cine_course_check.cfg build/cine_course_check.cfg
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_check.exe src/cine_course_check.go
-     ```
-      
-  - Mac
-     ```
-     $ ./gpm.sh
-     $ mkdir build
-     $ cp config/cine_course_check.cfg build/cine_course_check.cfg
-     $ go build -o build/cine_course_check src/cine_course_check.go
-     ```
-      
-  - 注意
-     ```
-     - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
-     - 课件多媒体资源（音视频,水印图,原图）检查工具
-     ```
      
-- ### 课程资源下载（包括课程图片，音频，视频等学习资源，不包含课程封面等辅助资源）
+- ### 课程资源下载（包括图片&音频&视频等Lesson学习资源）
   ```
   如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
   ```
@@ -142,9 +110,4 @@ $ ./gbuild_mac.sh
         四个文件拷贝到同一个目录下，并将cine_course_download.cfg, cine_media_synthesizer.cfg 按照需要完成配置信息。
     - 2.点击执行 cine_course_download，待课件全部下载成功后，点击执行cine_media_synthesizer 即可开始合成。
     - 3.待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
-    
-    
-    注意:  - 执行之前，需确认本地是否已安装ffmpeg（$ ffmpeg -version）
-    $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-    $ brew install ffmpeg
     ```
