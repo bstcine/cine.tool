@@ -63,21 +63,21 @@ func main() {
 		return
 	}
 	var adTmpTs string
-	if mediaConfgiModel.IsAd {
-		fmt.Println("添加推广图 true")
+	if mediaConfgiModel.IsAddSuffix {
+		fmt.Println("是否在结尾追加推广片段 true")
 		// 合成追加的ts,放置到临时目录中，待使用
-		adDir := componse_workdir + "/AD/tmp"
+		adDir := componse_workdir + "/SUFFIX/tmp"
 		if !utils.Exists(adDir) {
 			utils.CreatDirectory(adDir)
 		}
 		adTmpTs = adDir + "/tmp.ts"
 
-		imagePath := componse_workdir + "/AD/000.png"
-		audioPath := componse_workdir + "/AD/000.mp3"
+		imagePath := componse_workdir + "/SUFFIX/000.png"
+		audioPath := componse_workdir + "/SUFFIX/000.mp3"
 
 		res := utils.CreateTsWithImageAudio(imagePath, audioPath, adTmpTs, mediaConfgiModel)
 		if !res {
-			fmt.Println("推广图 ts 文件合成失败")
+			fmt.Println("推广片段 ts 文件合成失败")
 			return
 		}
 		fmt.Println("推广图 ts 合成完毕")
@@ -116,7 +116,7 @@ func dealDirectory(dirPath string, savePath string, adTmpTs string) {
 
 		for _, dirName := range dirNames {
 
-			if dirName == "MP4" || dirName == "AD" {
+			if dirName == "MP4" || dirName == "SUFFIX" {
 				continue
 			}
 			dealDirectory(dirPath+"/"+dirName, savePath+"/"+dirName, adTmpTs)
@@ -166,7 +166,7 @@ func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
 	savePath := videoModel.SavePath + "/" + videoModel.DirName + ".mp4"
 
 	// 如果只有一个音频，则直接采用一个合成命令行
-	if len(videoModel.Audios) == 1 && !mediaConfgiModel.IsAd {
+	if len(videoModel.Audios) == 1 && !mediaConfgiModel.IsAddSuffix {
 
 		// 只有一个音频组
 		avTs := startComponseAudioToVideo(videoModel, videoModel.Audios[0])
@@ -538,8 +538,8 @@ func readMediaSynthesuzerConfig(path string) bool {
 		if configArg["isTs"] == "true" {
 			configModel.IsTs = true
 		}
-		if configArg["isAd"] == "true" {
-			configModel.IsAd = true
+		if configArg["isAddSuffix"] == "true" {
+			configModel.IsAddSuffix = true
 		}
 		rate, isInt := utils.JudgeIsInt(configArg["rate"])
 		if isInt && rate > 0 {
