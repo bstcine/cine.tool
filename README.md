@@ -1,5 +1,5 @@
 
-### 前置任务: 预先安装ffmpeg
+### 前置任务: 预先安装ffmpeg （视频合成需要）
 ```shell
 第一步: 底部程序栏, 点击"Terminal"打开终端程序
 
@@ -29,12 +29,14 @@ $ cd cine.tool
       
 ## Build
 
-### Build_mac_all
+### Build所有工具
 ```
 $ ./gbuild_mac.sh
 ```
 
-### cine_tools
+<br>
+
+### 1. cine_tools
   - Window(exe)
      ```
      $ go get github.com/nfnt/resize
@@ -58,10 +60,7 @@ $ ./gbuild_mac.sh
 
 <br>
 
-### 课程资源下载（包括图片&音频&视频等Lesson学习资源）
-  ```
-  如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
-  ```
+### 2. 课程资源下载（Lesson的课件学习资源）
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -82,10 +81,7 @@ $ ./gbuild_mac.sh
 
 <br>
 
-- ### 音视频合成
-  ```
-  如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤，请看注意事项
-  ```
+- ### 3. 音视频合成
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -103,12 +99,12 @@ $ ./gbuild_mac.sh
      $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer/cine_media_synthesizer.cfg
      $ go build -o build/cine_media_synthesizer/cine_media_synthesizer src/cine_media_synthesizer.go
     ```
-     
-  - 使用：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
+  
+  <br>
+  
+  - 常规使用：资源下载 & 音视频合成
     ```
-    - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/cine_course_download.cfg,
-        /build/cine_media_synthesizer/cine_media_synthesizer, /build/cine_media_synthesizer/cine_media_synthesizer.cfg, 
-        四个文件拷贝到同一个目录下，并将cine_course_download.cfg, cine_media_synthesizer.cfg 按照需要完成配置信息。
-    - 2.点击执行 cine_course_download，待课件全部下载成功后，点击执行cine_media_synthesizer 即可开始合成。
-    - 3.待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
+    - 1. 生成 “资源下载” & “音视频合成” 执行文件。（参考上面 2 & 3 说明）
+    - 2. 点击执行 cine_course_download，待课件下载成功后. 然后点击执行 cine_media_synthesizer， 即开始合成。
+    - 3. 待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
     ```
