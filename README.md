@@ -84,7 +84,7 @@ $ ./gbuild_mac.sh
 
 <br>
 
-- #### 3. 音视频合成
+#### 3. 音视频合成
   - Window(exe)
     ```
      $ ./gpm.sh
