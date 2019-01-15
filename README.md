@@ -18,25 +18,28 @@ ffmpeg -version
 
 <br>
 <br>
+<br>
 
-# cine.tool
-## Setup
+## cine.tool
+### Setup
 
 ```shell
 $ git clone https://github.com/bstcine/cine.tool.git
 $ cd cine.tool
 ```
-      
-## Build
 
-### Build所有工具
+<br>
+      
+### Build
+
+#### 0. Build所有工具
 ```
 $ ./gbuild_mac.sh
 ```
 
 <br>
 
-### 1. cine_tools
+#### 1. cine_tools
   - Window(exe)
      ```
      $ go get github.com/nfnt/resize
@@ -60,7 +63,7 @@ $ ./gbuild_mac.sh
 
 <br>
 
-### 2. 课程资源下载（Lesson的课件学习资源）
+#### 2. 课程资源下载（Lesson的课件学习资源）
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -81,7 +84,7 @@ $ ./gbuild_mac.sh
 
 <br>
 
-- ### 3. 音视频合成
+- #### 3. 音视频合成
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -102,7 +105,7 @@ $ ./gbuild_mac.sh
   
   <br>
   
-  - 常规使用：资源下载 & 音视频合成
+#### 常规使用：资源下载 & 音视频合成
     ```
     - 1. 生成 “资源下载” & “音视频合成” 执行文件。（参考上面 2 & 3 说明）
     - 2. 点击执行 cine_course_download，待课件下载成功后. 然后点击执行 cine_media_synthesizer， 即开始合成。
