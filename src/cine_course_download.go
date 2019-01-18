@@ -25,15 +25,15 @@ import (
  */
 
 /// 配置下载资源路径
-var oss_download_resources string = conf.Course_downloadWorkDir
+var oss_download_resources string = "/download_resource"
 var oss_download_resources_debug string = "/Users/lidangkun/Desktop/oss_download"
 
 /// 配置配置文件路径
-var oss_download_configFile string = conf.Course_download_Config
+var oss_download_configFile string = "/cine_course_download.cfg"
 var oss_download_configFile_debug = "/Users/lidangkun/Desktop/oss_download/oss_download_config.cfg"
 
 /// 下载错误信息
-var oss_download_errorLog = conf.Course_download_errorLog
+var oss_download_errorLog = "/cine_course_download_errorlog.txt"
 var oss_download_errorLog_debug = "/Users/lidangkun/Desktop/oss_download/oss_error.txt"
 var errorLogPath string
 
