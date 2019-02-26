@@ -14,10 +14,10 @@ import (
 // 需要提供4个对外方法
 
 /// 单张图片合成为无声视频
-func CreateTsWithImage(imagePath string, audioPath string, duration int, rate int, width int, height int, targetPath string) bool {
+func CreateTsWithImage(imagePath string, audioPath string, rate int, width int, height int, targetPath string) bool {
 	imagePath = dealPath(imagePath)
 	targetPath = dealPath(targetPath)
-
+	duration := GetDuration(audioPath)
 	frameX, frameY := videoImageFrame(imagePath, width, height)
 	frameXStr := strconv.Itoa(frameX)
 	frameYStr := strconv.Itoa(frameY)

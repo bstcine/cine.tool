@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-var imageName string = "000.png"
-var audioName string = "000.mp3"
+var imageName string = "SUFFIX/000.png"
+var audioName string = "SUFFIX/000.mp3"
 var saveName string = "Target"
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 	// 将图片合成能为无声的音频
 	imagePath := componse_workdir + "/" + imageName
 	audioPath := componse_workdir + "/" + audioName
-	utils.CreateTsWithImage(imagePath, audioPath, 5, 25, 1920, 1080, appendTsPath)
+	utils.CreateTsWithImage(imagePath, audioPath, 25, 1920, 1080, appendTsPath)
 
 	// 创建目标地址
 	targetDir := componse_workdir + "/" + saveName
@@ -104,7 +104,7 @@ func scanDirectory(dirPath string, name string, componse_workdir string) []strin
 	cachePath = strings.Replace(cachePath, " ", "", -1)
 
 	for _, dirName := range dirNames {
-		if dirName == saveName || dirName == "temporary" {
+		if dirName == saveName || dirName == "temporary" || dirName == "SUFFIX" {
 			continue
 		}
 		var newPathBuffer bytes.Buffer

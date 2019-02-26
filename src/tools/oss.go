@@ -1,25 +1,25 @@
 package tools
 
 import (
-	"fmt"
-	"strings"
-	"strconv"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"os"
 	"../utils"
-	"log"
-	"io/ioutil"
-	"net/http"
-	"encoding/base64"
-	"crypto/hmac"
-	"hash"
-	"crypto/sha1"
-	"io"
-	"sort"
 	"bytes"
-	"time"
-	"errors"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"hash"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var serviceFilePath = "/mnt/web/app.bstcine.com/wwwroot/public/f/"
@@ -27,7 +27,7 @@ var serviceKjFilePath = "/mnt/web/kj.bstcine.com/wwwroot/"
 
 /**
 获取	阿里云清单路径
- */
+*/
 func getHttpListUrl(isOrig bool, param string) (url string) {
 	urls := strings.Split(param, ";")
 
@@ -37,7 +37,7 @@ func getHttpListUrl(isOrig bool, param string) (url string) {
 
 	if isOrig {
 		url = "http://www.bstcine.com/ f/" + mediaUrl
-	} else if strings.Contains(urlPrefix, "http://gcdn.bstcine.com") {
+	} else if strings.Contains(urlPrefix, "http://oss.bstcine.com") {
 		urlPrefix = strings.Replace(urlPrefix, "/img/", "/ img/", -1)
 		urlPrefix = strings.Replace(urlPrefix, "/mp3/", "/ mp3/", -1)
 
@@ -48,7 +48,7 @@ func getHttpListUrl(isOrig bool, param string) (url string) {
 
 /**
 资源迁移
- */
+*/
 func (tools Tools) MigrateObject() {
 	workDir := tools.WorkPath
 	confMap := tools.ConfMap
@@ -155,8 +155,8 @@ func (tools Tools) MigrateObject() {
 				urlPrefix := urls[1]
 				urlSuffix := urls[2]
 
-				if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
-					objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+				if strings.Contains(urlPrefix, "http://oss.bstcine.com/img") {
+					objectKey = strings.Replace(urlPrefix, "http://oss.bstcine.com/", "", -1) + mediaUrl + urlSuffix
 					objectKey = strings.Replace(objectKey, "/f/", "/", -1)
 					objectKey = objectKey[0:strings.Index(objectKey, ".")] + ".jpg"
 				} else {
@@ -189,7 +189,7 @@ func (tools Tools) MigrateObject() {
 
 /**
 资源权限设置
- */
+*/
 func (tools Tools) SetObjectACL() {
 	confMap := tools.ConfMap
 
@@ -218,7 +218,7 @@ func (tools Tools) SetObjectACL() {
 		urlPrefix := urls[1]
 		urlSuffix := urls[2]
 
-		urlPrefix = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1)
+		urlPrefix = strings.Replace(urlPrefix, "http://oss.bstcine.com/", "", -1)
 		objectKey := urlPrefix + mediaUrl + urlSuffix
 
 		// 设置Object的访问权限
@@ -233,7 +233,7 @@ func (tools Tools) SetObjectACL() {
 
 /**
 资源迁移校验
- */
+*/
 func (tools Tools) MigrateCheck() {
 	confMap := tools.ConfMap
 	if confMap["migrateType"] != "0" {
@@ -298,8 +298,8 @@ func (tools Tools) MigrateCheck() {
 			urlPrefix := urls[1]
 			urlSuffix := urls[2]
 
-			if strings.Contains(urlPrefix, "http://gcdn.bstcine.com/img") {
-				objectKey = strings.Replace(urlPrefix, "http://gcdn.bstcine.com/", "", -1) + mediaUrl + urlSuffix
+			if strings.Contains(urlPrefix, "http://oss.bstcine.com/img") {
+				objectKey = strings.Replace(urlPrefix, "http://oss.bstcine.com/", "", -1) + mediaUrl + urlSuffix
 				objectKey = strings.Replace(objectKey, "/f/", "/", -1)
 				objectKey = objectKey[0:strings.Index(objectKey, ".")] + ".jpg"
 			} else {
@@ -342,7 +342,7 @@ func (tools Tools) MigrateCheck() {
 
 /**
 资源(kj)中非 jpg 图片转 jpg
- */
+*/
 func (tools Tools) ImgFormatJPG() {
 	workDir := tools.WorkPath
 	confMap := tools.ConfMap
@@ -361,7 +361,7 @@ func (tools Tools) ImgFormatJPG() {
 			for ossObject := range jobs {
 				objectKey := ossObject.ObjectKey
 
-				if !strings.Contains(objectKey,".") {
+				if !strings.Contains(objectKey, ".") {
 					ossObject.Error = errors.New("非法文件")
 					results <- ossObject
 					continue
@@ -428,7 +428,7 @@ func (tools Tools) ImgFormatJPG() {
 
 /**
 课件资源图片加水印
- */
+*/
 func (tools Tools) ImgWaterMark() {
 	workDir := tools.WorkPath
 	confMap := tools.ConfMap
@@ -500,7 +500,7 @@ func (tools Tools) ImgWaterMark() {
 ######################################################
 ###################  阿里提供的 OSS API  ##############
 ######################################################
- */
+*/
 
 /**
 资源信息类
@@ -521,8 +521,8 @@ type OssInfo struct {
 
 /**
 获取 Oss Bucket
- */
-func (tools Tools) getBucket() (*oss.Bucket) {
+*/
+func (tools Tools) getBucket() *oss.Bucket {
 	confMap := tools.ConfMap
 
 	client, err := oss.New(confMap["Endpoint"], confMap["AccessKeyId"], confMap["AccessKeySecret"])
@@ -540,7 +540,7 @@ func (tools Tools) getBucket() (*oss.Bucket) {
 
 /**
 OSS 图片处理并保存
- */
+*/
 func (tools Tools) imgProcessSave(objKey, newObjKey, process string) (string, error) {
 	var bucket = "static-bstcine"
 	var region = "oss-cn-shanghai"
@@ -565,7 +565,7 @@ func (tools Tools) imgProcessSave(objKey, newObjKey, process string) (string, er
 	tools.signHeader(req, "/static-bstcine/"+objKey+"?x-oss-process")
 
 	resp, err := client.Do(req)
-	if(err != nil) {
+	if err != nil {
 		return "", err
 	}
 
