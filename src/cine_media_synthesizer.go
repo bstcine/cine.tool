@@ -62,7 +62,28 @@ func main() {
 	if !readResult {
 		return
 	}
-	var adTmpTs string
+	var prefixAdTmpTs string
+	if mediaConfgiModel.IsAddPrefix {
+		fmt.Println("是否在头部追加推广片段 true")
+		// 合成追加的ts,放置到临时目录中，待使用
+		adDir := componse_workdir + "/PREFIX/tmp"
+		if !utils.Exists(adDir) {
+			utils.CreatDirectory(adDir)
+		}
+		prefixAdTmpTs = adDir + "/tmp.ts"
+
+		imagePath := componse_workdir + "/PREFIX/000.png"
+		audioPath := componse_workdir + "/PREFIX/000.mp3"
+
+		res := utils.CreateTsWithImageAudio(imagePath, audioPath, prefixAdTmpTs, mediaConfgiModel)
+		if !res {
+			fmt.Println("前置推广片段 ts 文件合成失败")
+			return
+		}
+		fmt.Println("前置推广图 ts 合成完毕")
+	}
+
+	var suffixAdTmpTs string
 	if mediaConfgiModel.IsAddSuffix {
 		fmt.Println("是否在结尾追加推广片段 true")
 		// 合成追加的ts,放置到临时目录中，待使用
@@ -70,27 +91,27 @@ func main() {
 		if !utils.Exists(adDir) {
 			utils.CreatDirectory(adDir)
 		}
-		adTmpTs = adDir + "/tmp.ts"
+		suffixAdTmpTs = adDir + "/tmp.ts"
 
 		imagePath := componse_workdir + "/SUFFIX/000.png"
 		audioPath := componse_workdir + "/SUFFIX/000.mp3"
 
-		res := utils.CreateTsWithImageAudio(imagePath, audioPath, adTmpTs, mediaConfgiModel)
+		res := utils.CreateTsWithImageAudio(imagePath, audioPath, suffixAdTmpTs, mediaConfgiModel)
 		if !res {
-			fmt.Println("推广片段 ts 文件合成失败")
+			fmt.Println("后置推广片段 ts 文件合成失败")
 			return
 		}
-		fmt.Println("推广图 ts 合成完毕")
+		fmt.Println("后置推广图 ts 合成完毕")
 	}
 
 	// 生成保存文件夹MP4
 	savePath := componse_workdir + "/MP4"
 
 	// 处理工作目录
-	dealDirectory(componse_workdir, savePath, adTmpTs)
+	dealDirectory(componse_workdir, savePath, prefixAdTmpTs, suffixAdTmpTs)
 }
 
-func dealDirectory(dirPath string, savePath string, adTmpTs string) {
+func dealDirectory(dirPath string, savePath string, prefixAdTmpTs string, suffixAdTmpTs string) {
 
 	// 判断是否是LessonDirectory
 	dirComponents := strings.Split(dirPath, "/")
@@ -102,7 +123,7 @@ func dealDirectory(dirPath string, savePath string, adTmpTs string) {
 			fmt.Printf("%+v\n", audioModel)
 		}
 
-		startComponseVideoModel(videoModel, adTmpTs)
+		startComponseVideoModel(videoModel, prefixAdTmpTs, suffixAdTmpTs)
 		fmt.Println("lesson目录处理结束", dirPath)
 	} else {
 		// 获取目录中的所有目录，递归访问
@@ -116,10 +137,10 @@ func dealDirectory(dirPath string, savePath string, adTmpTs string) {
 
 		for _, dirName := range dirNames {
 
-			if dirName == "MP4" || dirName == "SUFFIX" {
+			if dirName == "MP4" || dirName == "SUFFIX" || dirName == "PREFIX" {
 				continue
 			}
-			dealDirectory(dirPath+"/"+dirName, savePath+"/"+dirName, adTmpTs)
+			dealDirectory(dirPath+"/"+dirName, savePath+"/"+dirName, prefixAdTmpTs, suffixAdTmpTs)
 		}
 	}
 }
@@ -128,7 +149,7 @@ func dealDirectory(dirPath string, savePath string, adTmpTs string) {
 /**
 @param videomodel 合成视频模型
 */
-func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
+func startComponseVideoModel(videoModel componseVideo, prefixAdTmpTs string, suffixAdTmpTs string) bool {
 
 	var saveSuffix string
 	if mediaConfgiModel.IsTs {
@@ -166,7 +187,7 @@ func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
 	savePath := videoModel.SavePath + "/" + videoModel.DirName + ".mp4"
 
 	// 如果只有一个音频，则直接采用一个合成命令行
-	if len(videoModel.Audios) == 1 && !mediaConfgiModel.IsAddSuffix {
+	if len(videoModel.Audios) == 1 && !mediaConfgiModel.IsAddSuffix && !mediaConfgiModel.IsAddPrefix {
 
 		// 只有一个音频组
 		avTs := startComponseAudioToVideo(videoModel, videoModel.Audios[0])
@@ -196,6 +217,10 @@ func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
 	// 表示有多个音频需要合成, 创建临时合并文件组
 	var mpegtsAVArr []string
 
+	if prefixAdTmpTs != "" {
+		mpegtsAVArr = append(mpegtsAVArr, prefixAdTmpTs)
+	}
+
 	audioCount := len(videoModel.Audios)
 	for index, audioModel := range videoModel.Audios {
 
@@ -211,8 +236,8 @@ func startComponseVideoModel(videoModel componseVideo, adTmpTs string) bool {
 		mpegtsAVArr = append(mpegtsAVArr, tmsTs)
 	}
 
-	if adTmpTs != "" {
-		mpegtsAVArr = append(mpegtsAVArr, adTmpTs)
+	if suffixAdTmpTs != "" {
+		mpegtsAVArr = append(mpegtsAVArr, suffixAdTmpTs)
 	}
 
 	fmt.Println("开始合并标准多媒体数据源...")
@@ -517,6 +542,7 @@ func readMediaSynthesuzerConfig(path string) bool {
 		"3.0",
 		"yuv420p",
 		false,
+		false,
 	}
 
 	fmt.Println("开始读取配置文件: ", path)
@@ -540,6 +566,9 @@ func readMediaSynthesuzerConfig(path string) bool {
 		}
 		if configArg["isAddSuffix"] == "true" {
 			configModel.IsAddSuffix = true
+		}
+		if configArg["isAddPrefix"] == "true" {
+			configModel.IsAddPrefix = true
 		}
 		rate, isInt := utils.JudgeIsInt(configArg["rate"])
 		if isInt && rate > 0 {

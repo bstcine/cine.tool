@@ -1,36 +1,45 @@
-# cine.tool
-- ## Setup
 
-```
-前置任务: 打开终端
-1. 在程序坞(底部程序栏)中点击LaunchPad，选择 "其他"文件夹，即可找到"终端"程序，点击即可运行
+### 前置任务: 预先安装ffmpeg （视频合成需要）
+```shell
+第一步: 底部程序栏, 点击"Terminal"打开终端程序
 
 
-第一步: 安装homebrew，在下面的指令行拷贝到终端中，敲击 enter 键执行
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+第二步: 安装homebrew，拷贝下面指令，敲"enter"执行
+$ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-第二步: 安装成功后，继续安装 ffmpeg，将下面的指令行拷贝到终端中，敲击 enter 键执行
-brew install ffmpeg
+第三步: 安装ffmpeg
+$ brew install ffmpeg
 
-第三部：安装结束后，将下面的指令行拷贝到终端中，敲击enter键执行
+第四部：查看ffmpeg是否安装成功
 ffmpeg -version
 
 至此，即可显示ffmpeg的相关信息，表示安装成功
 ```
 
+<br>
+<br>
+<br>
+
+## cine.tool
+### Setup
+
 ```shell
 $ git clone https://github.com/bstcine/cine.tool.git
 $ cd cine.tool
 ```
-      
-- ## Build
 
-- ### Build_mac_all
+<br>
+      
+### Build
+
+#### 0. Build所有工具
 ```
 $ ./gbuild_mac.sh
 ```
 
-- ### cine_tools
+<br>
+
+#### 1. cine_tools
   - Window(exe)
      ```
      $ go get github.com/nfnt/resize
@@ -52,44 +61,9 @@ $ ./gbuild_mac.sh
      $ ./bin/cine_tools
      ```  
 
-- ### 词汇习题下载工具
-  - Window(exe)
-     ```
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/app_download_word.exe src/app_download_word.go
-     ```
-  - Mac
-     ```
-     $ go build -o build/app_download src/app_download_word.go
-     ```
-      
-- ### 课程检查
-  - Window(exe)
-     ```
-     $ ./gpm.sh
-     $ mkdir build
-     $ cp config/cine_course_check.cfg build/cine_course_check.cfg
-     $ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/cine_course_check.exe src/cine_course_check.go
-     ```
-      
-  - Mac
-     ```
-     $ ./gpm.sh
-     $ mkdir build
-     $ cp config/cine_course_check.cfg build/cine_course_check.cfg
-     $ go build -o build/cine_course_check src/cine_course_check.go
-     ```
-      
-  - 注意
-     ```
-     - 在执行 go build -o 之前，需要更改 cine.tool/src/conf/config.go 中的 IsDebug=false
-     - 课件多媒体资源（音视频,水印图,原图）检查工具
-     ```
-     
-- ### 课程资源下载（包括课程图片，音频，视频等学习资源，不包含课程封面等辅助资源）
-  ```
-  如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤
-  ```
-  - #### 构建
+<br>
+
+#### 2. 课程资源下载（Lesson的课件学习资源）
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -108,11 +82,9 @@ $ ./gbuild_mac.sh
      $ go build -o build/cine_course_download/cine_course_download src/cine_course_download.go
     ```
 
-- ### 音视频合成
-  ```
-  如果已经执行了Build_mac_all 即已经执行了 ./gbuild_mac.sh脚本，则可以忽略以下步骤，请看注意事项
-  ```
-  - #### 构建
+<br>
+
+#### 3. 音视频合成
   - Window(exe)
     ```
      $ ./gpm.sh
@@ -130,17 +102,12 @@ $ ./gbuild_mac.sh
      $ cp config/cine_media_synthesizer.cfg build/cine_media_synthesizer/cine_media_synthesizer.cfg
      $ go build -o build/cine_media_synthesizer/cine_media_synthesizer src/cine_media_synthesizer.go
     ```
-     
-  - 使用：使用合成工具执行某些课程的合成工作时，需要执行以下步骤
-    ```
-    - 1.将/build/cine_course_download/cine_course_download, /build/cine_course_download/cine_course_download.cfg,
-        /build/cine_media_synthesizer/cine_media_synthesizer, /build/cine_media_synthesizer/cine_media_synthesizer.cfg, 
-        四个文件拷贝到同一个目录下，并将cine_course_download.cfg, cine_media_synthesizer.cfg 按照需要完成配置信息。
-    - 2.点击执行 cine_course_download，待课件全部下载成功后，点击执行cine_media_synthesizer 即可开始合成。
-    - 3.待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
-    
-    
-    注意:  - 执行之前，需确认本地是否已安装ffmpeg（$ ffmpeg -version）
-    $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-    $ brew install ffmpeg
-    ```
+  
+  <br>
+  
+#### 4.常规使用：资源下载 & 音视频合成
+```
+    - 1. 生成 “资源下载” & “音视频合成” 执行文件。（参考上面 2 & 3 说明）
+    - 2. 点击执行 cine_course_download，待课件下载成功后. 然后点击执行 cine_media_synthesizer， 即开始合成。
+    - 3. 待执行完毕后，即可在 /MP4/ 文件夹下看到所有合成完毕的课件。
+```

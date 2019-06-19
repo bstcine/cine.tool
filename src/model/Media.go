@@ -12,6 +12,7 @@ type MediaConfig struct {
 	Profile     string  // 配置属性profile
 	Level       string  // 配置属性level
 	Pix         string  // 配置属性fix_fmt
+	IsAddPrefix bool    // 是否在开头追加推广片段
 	IsAddSuffix bool    // 是否在结尾追加推广片段
 }
 

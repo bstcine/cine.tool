@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-var imageName string = "SUFFIX/000.png"
-var audioName string = "SUFFIX/000.mp3"
+var imageName string = "000.png"
+var audioName string = "000.mp3"
 var saveName string = "Target"
 
 func main() {
@@ -30,16 +30,35 @@ func main() {
 	fmt.Println(componseConfig)
 	readConfig(componseConfig)
 
-	// 创建临时地址
 	temporaryPath := componse_workdir + "/temporary"
 	if !utils.Exists(temporaryPath) {
 		utils.CreatDirectory(temporaryPath)
 	}
-	appendTsPath := temporaryPath + "/temporary.ts"
-	// 将图片合成能为无声的音频
-	imagePath := componse_workdir + "/" + imageName
-	audioPath := componse_workdir + "/" + audioName
-	utils.CreateTsWithImage(imagePath, audioPath, 25, 1920, 1080, appendTsPath)
+
+	prefixPath := componse_workdir + "/PREFIX"
+	suffixPath := componse_workdir + "/SUFFIX"
+
+	isHasPrefix := utils.Exists(prefixPath)
+	isHasSuffix := utils.Exists(suffixPath)
+	if !isHasPrefix && !isHasSuffix {
+		fmt.Println("PREFIX、SUFFIX必须至少提供一个")
+		return
+	}
+
+	var prefixTSPath string
+	var suffixTSPath string
+	if isHasPrefix {
+		prefixTSPath = prefixPath + "/temporary.ts"
+		pImagePath := prefixPath + "/" + imageName
+		pAudioPath := prefixPath + "/" + audioName
+		utils.CreateTsWithImage(pImagePath, pAudioPath, 25, 1920, 1080, prefixTSPath)
+	}
+	if isHasSuffix {
+		suffixTSPath = suffixPath + "/temporary.ts"
+		sImagePath := suffixPath + "/" + imageName
+		sAudioPath := suffixPath + "/" + audioName
+		utils.CreateTsWithImage(sImagePath, sAudioPath, 25, 1920, 1080, suffixTSPath)
+	}
 
 	// 创建目标地址
 	targetDir := componse_workdir + "/" + saveName
@@ -66,16 +85,26 @@ func main() {
 		}
 		savePath := componse_workdir + "/" + saveName + "/" + mp4Name
 		var mpegtsArr []string
+		if isHasPrefix {
+			mpegtsArr = append(mpegtsArr, prefixTSPath)
+		}
 		mpegtsArr = append(mpegtsArr, tmpTs)
-		mpegtsArr = append(mpegtsArr, appendTsPath)
+		if isHasSuffix {
+			mpegtsArr = append(mpegtsArr, suffixTSPath)
+		}
 		isSuc = utils.ComponseMP4WithTs(mpegtsArr, savePath)
 		if !isSuc {
 			fmt.Println("合成失败")
 		}
 		os.Remove(tmpTs)
 	}
+	if isHasPrefix {
+		os.Remove(prefixTSPath)
+	}
+	if isHasSuffix {
+		os.Remove(suffixTSPath)
+	}
 	os.RemoveAll(temporaryPath)
-
 }
 
 func scanDirectory(dirPath string, name string, componse_workdir string) []string {
@@ -104,7 +133,7 @@ func scanDirectory(dirPath string, name string, componse_workdir string) []strin
 	cachePath = strings.Replace(cachePath, " ", "", -1)
 
 	for _, dirName := range dirNames {
-		if dirName == saveName || dirName == "temporary" || dirName == "SUFFIX" {
+		if dirName == saveName || dirName == "temporary" || dirName == "SUFFIX" || dirName == "PREFIX" {
 			continue
 		}
 		var newPathBuffer bytes.Buffer

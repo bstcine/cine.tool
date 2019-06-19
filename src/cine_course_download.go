@@ -2,15 +2,15 @@ package main
 
 import (
 	"./conf"
-	"./utils"
 	"./model"
+	"./utils"
+	"bufio"
+	"encoding/base64"
 	"fmt"
 	"os"
-	"bufio"
-	"strings"
 	"path/filepath"
 	"strconv"
-	"encoding/base64"
+	"strings"
 )
 
 /**
@@ -25,15 +25,15 @@ import (
  */
 
 /// 配置下载资源路径
-var oss_download_resources string = conf.Course_downloadWorkDir
+var oss_download_resources string = "/download_resource"
 var oss_download_resources_debug string = "/Users/lidangkun/Desktop/oss_download"
 
 /// 配置配置文件路径
-var oss_download_configFile string = conf.Course_download_Config
+var oss_download_configFile string = "/cine_course_download.cfg"
 var oss_download_configFile_debug = "/Users/lidangkun/Desktop/oss_download/oss_download_config.cfg"
 
 /// 下载错误信息
-var oss_download_errorLog = conf.Course_download_errorLog
+var oss_download_errorLog = "/cine_course_download_errorlog.txt"
 var oss_download_errorLog_debug = "/Users/lidangkun/Desktop/oss_download/oss_error.txt"
 var errorLogPath string
 
@@ -52,20 +52,20 @@ var imageStyle = ""
 
 // 覆盖二维码配置样式
 var downloadConfig = model.DownloadConfig{
-	"",                   // 覆盖类型
-	false,              // 是否覆盖水印图片
-	"logoCover.png",  // 覆盖水印图objectKey
-	"100",               // 覆盖水印图名都
-	"ne",              // 覆盖水印位置
-	"0",                  // x轴偏移量
-	"0",                  // y轴偏移量
-	1,                 // 水印图相对于大图的宽度比例
-	1,                 // 水印图相对第一大图的高度比例
+	"",              // 覆盖类型
+	false,           // 是否覆盖水印图片
+	"logoCover.png", // 覆盖水印图objectKey
+	"100",           // 覆盖水印图名都
+	"ne",            // 覆盖水印位置
+	"0",             // x轴偏移量
+	"0",             // y轴偏移量
+	1,               // 水印图相对于大图的宽度比例
+	1,               // 水印图相对第一大图的高度比例
 }
 
 var coverStyle string
 
-func createCoverStyle () {
+func createCoverStyle() {
 
 	// 判断是否需要重新编码
 	if coverStyle != "" {
@@ -75,7 +75,7 @@ func createCoverStyle () {
 	var waterMarkW int = 0
 	var waterMarkH int = 0
 
-	coverWidth,coverHeight,err := utils.GetPublicImageInfo(downloadConfig.CoverImageKey)
+	coverWidth, coverHeight, err := utils.GetPublicImageInfo(downloadConfig.CoverImageKey)
 
 	if err != nil {
 		fmt.Println(err)
@@ -90,15 +90,15 @@ func createCoverStyle () {
 	coverStyle = downloadConfig.CoverImageKey + "?x-oss-process=image/resize,"
 	if waterMarkW == 0 || waterMarkH == 0 {
 		coverStyle = coverStyle + "P_20"
-	}else {
+	} else {
 		coverStyle = coverStyle + "m_fixed,w_" + utils.ChangeInt(waterMarkW) + ",h_" + utils.ChangeInt(waterMarkH)
 	}
-	fmt.Println(coverStyle,coverWidth,coverHeight)
+	fmt.Println(coverStyle, coverWidth, coverHeight)
 	coverStyle = base64.StdEncoding.EncodeToString([]byte(coverStyle))
 	fmt.Println(coverStyle)
 	// 替换编码中的'/','+'
-	coverStyle = strings.Replace(coverStyle,"+","-",-1)
-	coverStyle = strings.Replace(coverStyle,"/","_",-1)
+	coverStyle = strings.Replace(coverStyle, "+", "-", -1)
+	coverStyle = strings.Replace(coverStyle, "/", "_", -1)
 	// 生成完整的样式
 	coverStyle = "image/watermark,image_" + coverStyle + ",t_" + downloadConfig.Transparent + ",g_" +
 		downloadConfig.CoverLocation + ",x_" + downloadConfig.XInstance + ",y_" + downloadConfig.YInstance
@@ -113,14 +113,14 @@ func main() {
 		resourcePath = oss_download_resources_debug
 		configPath = oss_download_configFile_debug
 		errorLogPath = oss_download_errorLog_debug
-	}else {
-		dir,err := filepath.Abs(filepath.Dir(os.Args[0]))
+	} else {
+		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		fmt.Println(dir)
 		if err != nil {
 			return
 		}
 
-		dir = strings.Replace(dir,"\\","/",-1)
+		dir = strings.Replace(dir, "\\", "/", -1)
 
 		resourcePath = dir + oss_download_resources
 		configPath = dir + oss_download_configFile
@@ -136,11 +136,11 @@ func main() {
 	}
 
 	// 创建配置文件
-	courseIds,courseAliasNames,lessonIds := readConfig(configPath)
+	courseIds, courseAliasNames, lessonIds := readConfig(configPath)
 
 	if len(courseIds) == 0 || len(courseAliasNames) == 0 || len(courseIds) != len(courseAliasNames) {
 
-		fmt.Println("课程 Id 和别名设置出错",courseIds,courseAliasNames)
+		fmt.Println("课程 Id 和别名设置出错", courseIds, courseAliasNames)
 
 		return
 	}
@@ -157,18 +157,18 @@ func main() {
 	createCoverStyle()
 
 	// 开始登入服务器获取权限
-	token := utils.GetAdminPermission(oss_download_account,oss_download_password)
+	token := utils.GetAdminPermission(oss_download_account, oss_download_password)
 
 	if token == "" {
 		return
 	}
 
 	// 开始下载课件列表
-	downloadStatus := downloadCourseList(resourcePath,token,courseIds,courseAliasNames,lessonIds)
+	downloadStatus := downloadCourseList(resourcePath, token, courseIds, courseAliasNames, lessonIds)
 
 	if downloadStatus {
 		fmt.Println("本次课件资源全部下载完成")
-	}else{
+	} else {
 		fmt.Println("本次课件部分资源下载失败，请重新执行本程序，续传失败的文件")
 	}
 
@@ -181,15 +181,15 @@ func main() {
 //*****************************************************************
 
 /// 获取下载课件对象列表
-func downloadCourseList(resourcePath string,token string,courseIds []string,courseAliasNames []string,lessonIds [][]string) bool {
+func downloadCourseList(resourcePath string, token string, courseIds []string, courseAliasNames []string, lessonIds [][]string) bool {
 
-	_,courseModels := utils.ListWithDownloadCourses(token,courseIds)
+	_, courseModels := utils.ListWithDownloadCourses(token, courseIds)
 
 	var realCourseModels []model.Course
 
-	for _,courseId := range courseIds {
+	for _, courseId := range courseIds {
 
-		for _,courseModel := range courseModels {
+		for _, courseModel := range courseModels {
 
 			if courseId == courseModel.Id {
 				realCourseModels = append(realCourseModels, courseModel)
@@ -203,8 +203,8 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 	if len(courseModels) != len(courseAliasNames) {
 
 		fmt.Println("网端可下载课件数量与别名不符")
-		fmt.Println("可下载课件如下:\n",courseModels)
-		fmt.Println("别名如下:\n",courseAliasNames)
+		fmt.Println("可下载课件如下:\n", courseModels)
+		fmt.Println("别名如下:\n", courseAliasNames)
 
 		return false
 	}
@@ -213,7 +213,7 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 
 	// 已正确获取服务器权限，开始访问列表
 
-	for i := 0; i < len(courseModels);i++  {
+	for i := 0; i < len(courseModels); i++ {
 
 		courseModel := courseModels[i]
 
@@ -225,7 +225,7 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
 			downloadLessonIds = lessonIds[i]
 		}
 
-		courseDownloadStatus := downloadCourse(resourcePath,token,courseModel.Id,alias,downloadLessonIds)
+		courseDownloadStatus := downloadCourse(resourcePath, token, courseModel.Id, alias, downloadLessonIds)
 
 		if courseDownloadStatus == false {
 			downloadStatus = false
@@ -241,24 +241,24 @@ func downloadCourseList(resourcePath string,token string,courseIds []string,cour
  * @param courseId 需要下载的课程Id
  * @param lessonIds 指定的lesson了列表
  */
-func downloadCourse(resourcePath string,token string ,courseId string,alias string, lessonIds []string) bool {
+func downloadCourse(resourcePath string, token string, courseId string, alias string, lessonIds []string) bool {
 
-	_, lessons := utils.ListWithDownloadMedias(token,courseId,lessonIds)
+	_, lessons := utils.ListWithDownloadMedias(token, courseId, lessonIds)
 
 	var coursePath = resourcePath + "/" + alias
 
 	var downloadStatus bool = true
 
-	for _,lessonModel := range lessons {
+	for _, lessonModel := range lessons {
 
-		chapterAlias := strings.Replace(lessonModel.ChapterName,"/","#",-1)
+		chapterAlias := strings.Replace(lessonModel.ChapterName, "/", "#", -1)
 
-		if strings.Contains(lessonModel.ChapterName,"/") {
-			lessonModel.ChapterName = strings.Replace(lessonModel.ChapterName,"/","_",-1)
+		if strings.Contains(lessonModel.ChapterName, "/") {
+			lessonModel.ChapterName = strings.Replace(lessonModel.ChapterName, "/", "_", -1)
 		}
 
-		if strings.Contains(lessonModel.Name,"/") {
-			lessonModel.Name = strings.Replace(lessonModel.Name,"/","_",-1)
+		if strings.Contains(lessonModel.Name, "/") {
+			lessonModel.Name = strings.Replace(lessonModel.Name, "/", "_", -1)
 		}
 
 		// 生成下载路径
@@ -266,7 +266,7 @@ func downloadCourse(resourcePath string,token string ,courseId string,alias stri
 
 		utils.CreatDirectory(downloadPath)
 
-		lessonDownloadStatus := downloadLesson(downloadPath,courseId,alias,chapterAlias,lessonModel)
+		lessonDownloadStatus := downloadLesson(downloadPath, courseId, alias, chapterAlias, lessonModel)
 
 		if lessonDownloadStatus == false {
 			downloadStatus = false
@@ -276,21 +276,21 @@ func downloadCourse(resourcePath string,token string ,courseId string,alias stri
 	return downloadStatus
 }
 
-func downloadLesson(downloadPath string,courseId string,alias string,chapterAlias string,lessonModel model.CheckLesson) bool {
+func downloadLesson(downloadPath string, courseId string, alias string, chapterAlias string, lessonModel model.CheckLesson) bool {
 
-	for index,mediaModel := range lessonModel.Medias {
+	for index, mediaModel := range lessonModel.Medias {
 
-		downloadAVMedia(courseId,alias,chapterAlias,downloadPath,mediaModel,index)
+		downloadAVMedia(courseId, alias, chapterAlias, downloadPath, mediaModel, index)
 
-		for _,imageModel := range mediaModel.Images {
+		for _, imageModel := range mediaModel.Images {
 
 			if len(imageModel.Time) == 1 {
-				imageModel.Time = "00"+imageModel.Time
-			}else if len(imageModel.Time) == 2 {
-				imageModel.Time = "0"+imageModel.Time
+				imageModel.Time = "00" + imageModel.Time
+			} else if len(imageModel.Time) == 2 {
+				imageModel.Time = "0" + imageModel.Time
 			}
 
-			downloadImage(courseId,alias,chapterAlias,downloadPath,imageModel,index)
+			downloadImage(courseId, alias, chapterAlias, downloadPath, imageModel, index)
 		}
 
 	}
@@ -298,18 +298,17 @@ func downloadLesson(downloadPath string,courseId string,alias string,chapterAlia
 	return true
 }
 
-
-func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath string,media model.CheckMedia, seq int) bool {
+func downloadAVMedia(courseId string, alias string, chapterAlias string, lessonPath string, media model.CheckMedia, seq int) bool {
 
 	if !oss_download_av_media {
-		return  true
+		return true
 	}
 
 	if media.Url == "" {
-		return  true
+		return true
 	}
 
-	urlComponents := strings.Split(media.Url,".")
+	urlComponents := strings.Split(media.Url, ".")
 
 	extension := "." + urlComponents[1]
 
@@ -318,35 +317,35 @@ func downloadAVMedia(courseId string,alias string,chapterAlias string,lessonPath
 
 	objectKey := "kj/" + media.Url
 
-	fmt.Println("开始下载资源:",objectKey)
+	fmt.Println("开始下载资源:", objectKey)
 
-	downloadStatus := downloadOssResource(savePath,objectKey)
+	downloadStatus := downloadOssResource(savePath, objectKey)
 
 	if !downloadStatus {
-		fmt.Println("下载失败:",objectKey)
+		fmt.Println("下载失败:", objectKey)
 		// 生成错误信息
 		errorMes := savePath + "," + objectKey + "\n"
 
-		utils.AppendStringToFile(errorLogPath,errorMes)
-	}else {
-		fmt.Println("下载完毕:",objectKey)
+		utils.AppendStringToFile(errorLogPath, errorMes)
+	} else {
+		fmt.Println("下载完毕:", objectKey)
 	}
 
 	return downloadStatus
 }
 
-func downloadImage(courseId string,alias string,chapterAlias string,lessonPath string,image model.Image, mediaSeq int) bool {
+func downloadImage(courseId string, alias string, chapterAlias string, lessonPath string, image model.Image, mediaSeq int) bool {
 
 	if !oss_download_image {
 		return true
 	}
 
 	if image.Url == "" {
-		return  true
+		return true
 	}
 
 	// 将image的url扩展名更换为.jpg
-	imageUrlComponents := strings.Split(image.Url,".")
+	imageUrlComponents := strings.Split(image.Url, ".")
 	image.Url = imageUrlComponents[0] + ".jpg"
 
 	// + alias + "_" + chapterAlias + "_"
@@ -354,38 +353,38 @@ func downloadImage(courseId string,alias string,chapterAlias string,lessonPath s
 
 	if utils.Exists(savePath) {
 
-		fmt.Println("待下载文件已存在:",savePath)
+		fmt.Println("待下载文件已存在:", savePath)
 
-		return  true
+		return true
 	}
 
 	objectKey := "kj/" + image.Url
 
 	if downloadConfig.CoverQrcode {
 
-		return utils.DownloadImage(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey,coverStyle)
+		return utils.DownloadImage(oss_download_endPoint, oss_download_accessKeyId, oss_download_accessKeySecret, oss_download_bucket, savePath, objectKey, coverStyle)
 	}
 
 	objectKey = "kj/" + image.Url + imageStyle
 
 	url := "http://oss.bstcine.com/" + objectKey
 
-	fmt.Println("开始下载资源:",url)
+	fmt.Println("开始下载资源:", url)
 
 	if !utils.CheckResourceSaveStatus(objectKey) {
-		fmt.Println("资源不存在:",objectKey)
+		fmt.Println("资源不存在:", objectKey)
 		return false
 	}
 
-	downloadStatus := utils.DownloadFile(url,savePath)
+	downloadStatus := utils.DownloadFile(url, savePath)
 
 	if !downloadStatus {
 
-		fmt.Println("下载失败:",objectKey)
+		fmt.Println("下载失败:", objectKey)
 		errorMes := savePath + "," + objectKey + "\n"
-		utils.AppendStringToFile(errorLogPath,errorMes)
-	}else {
-		fmt.Println("下载完毕:",objectKey)
+		utils.AppendStringToFile(errorLogPath, errorMes)
+	} else {
+		fmt.Println("下载完毕:", objectKey)
 	}
 
 	return downloadStatus
@@ -397,7 +396,7 @@ func downloadOssResource(savePath string, objectKey string) bool {
 	isHadDownload := utils.Exists(savePath)
 
 	if isHadDownload {
-		fmt.Println("资源已下载过",savePath)
+		fmt.Println("资源已下载过", savePath)
 		return true
 	}
 
@@ -406,12 +405,12 @@ func downloadOssResource(savePath string, objectKey string) bool {
 
 	if !isResourceHad {
 
-		fmt.Println("资源不存在:",objectKey)
+		fmt.Println("资源不存在:", objectKey)
 
 		return false
 	}
 
-	downloadStatus := utils.DownloadOssResource(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey)
+	downloadStatus := utils.DownloadOssResource(oss_download_endPoint, oss_download_accessKeyId, oss_download_accessKeySecret, oss_download_bucket, savePath, objectKey)
 
 	return downloadStatus
 
@@ -426,10 +425,10 @@ func downloadFileName(number int) string {
 	}
 
 	if number >= 10 {
-		return "0"+s
+		return "0" + s
 	}
 
-	return "00"+s
+	return "00" + s
 }
 
 //*****************************************************************
@@ -446,20 +445,20 @@ func candownloadErrorLog() bool {
 
 		errorPath = oss_download_errorLog_debug
 
-	}else  {
+	} else {
 
 		errorPath = oss_download_errorLog
 
 	}
 
-	_,err := os.Stat(errorPath)
+	_, err := os.Stat(errorPath)
 
 	if err != nil {
-		return  false
+		return false
 	}
 
 	// 读取文件中的数据
-	errorObjects,err := utils.ReadLines(errorPath)
+	errorObjects, err := utils.ReadLines(errorPath)
 
 	if err != nil {
 		// 读取失败的处理
@@ -472,20 +471,20 @@ func candownloadErrorLog() bool {
 		// 删除错误日志文件
 		os.Remove(errorPath)
 
-		return  false
+		return false
 	}
 
 	var downloadStatus = true
 
-	for _,errorObject := range errorObjects {
+	for _, errorObject := range errorObjects {
 
-		if !strings.Contains(errorObject,",") {
+		if !strings.Contains(errorObject, ",") {
 			continue
 		}
 
-		objectComponent := strings.Split(errorObject,",")
+		objectComponent := strings.Split(errorObject, ",")
 
-		downloadErrorStatus := downloadErrorObject(objectComponent[1],objectComponent[0])
+		downloadErrorStatus := downloadErrorObject(objectComponent[1], objectComponent[0])
 
 		if downloadErrorStatus == false {
 			downloadStatus = false
@@ -497,22 +496,23 @@ func candownloadErrorLog() bool {
 		os.Remove(errorPath)
 	}
 
-	return  true
+	return true
 
 }
+
 // 下载错误对象
 /**
  * @param savePath 保存路径
  * @param objectKey 下载对象
  */
-func downloadErrorObject(savePath string,objectKey string) bool {
+func downloadErrorObject(savePath string, objectKey string) bool {
 
-	downloadStatus := utils.DownloadOssResource(oss_download_endPoint,oss_download_accessKeyId,oss_download_accessKeySecret,oss_download_bucket,savePath,objectKey)
+	downloadStatus := utils.DownloadOssResource(oss_download_endPoint, oss_download_accessKeyId, oss_download_accessKeySecret, oss_download_bucket, savePath, objectKey)
 
 	if downloadStatus {
 
 		// 下载完成，移出错误日志
-		fmt.Println("下载完成",objectKey)
+		fmt.Println("下载完成", objectKey)
 		removeErrorObject(objectKey)
 
 	}
@@ -522,9 +522,9 @@ func downloadErrorObject(savePath string,objectKey string) bool {
 
 /// 将下载失败的对象保存到错误日志中
 /**
- @param objectKey 下载失败的对象
- @param savePath 保存地址
- */
+@param objectKey 下载失败的对象
+@param savePath 保存地址
+*/
 func addErrorObject(objectKey string, savePath string) {
 
 	var errorPath string
@@ -533,25 +533,25 @@ func addErrorObject(objectKey string, savePath string) {
 
 		errorPath = oss_download_errorLog_debug
 
-	}else  {
+	} else {
 
 		errorPath = oss_download_errorLog
 
 	}
 
 	// 判断文件是否存在
-	_,err := os.Stat(errorPath)
+	_, err := os.Stat(errorPath)
 
 	if err != nil {
 		// 创建一个错误日志文件
-		_,err = os.Create(errorPath)
+		_, err = os.Create(errorPath)
 		if err == nil {
 			fmt.Println("错误日志创建成功")
 		}
 	}
 
 	// 读取文件中的数据
-	errorObjects,err := utils.ReadLines(errorPath)
+	errorObjects, err := utils.ReadLines(errorPath)
 
 	if err != nil {
 		// 读取失败的处理
@@ -563,32 +563,32 @@ func addErrorObject(objectKey string, savePath string) {
 
 	if len(errorObjects) == 0 {
 
-		errorStrings = objectKey+","+savePath
+		errorStrings = objectKey + "," + savePath
 
-	}else {
+	} else {
 
-		for _,errorObject := range errorObjects {
+		for _, errorObject := range errorObjects {
 
-			if !strings.Contains(errorObject,",") {
+			if !strings.Contains(errorObject, ",") {
 				continue
 			}
 
-			if strings.Contains(errorObject,objectKey) {
+			if strings.Contains(errorObject, objectKey) {
 				return
 			}
 
 			// 正常数据
 			if errorStrings == "" {
 				errorStrings = errorObject
-			}else {
+			} else {
 				errorStrings = errorStrings + "\n" + errorObject
 			}
 		}
 
-		errorStrings = errorStrings+"\n"+objectKey+","+savePath
+		errorStrings = errorStrings + "\n" + objectKey + "," + savePath
 	}
 
-	fileHandler,err := os.Create(errorPath)
+	fileHandler, err := os.Create(errorPath)
 	// 存储错误信息
 	writer := bufio.NewWriter(fileHandler)
 
@@ -598,7 +598,7 @@ func addErrorObject(objectKey string, savePath string) {
 
 }
 
-func removeErrorObject(objectKey string){
+func removeErrorObject(objectKey string) {
 
 	var errorPath string
 
@@ -606,14 +606,14 @@ func removeErrorObject(objectKey string){
 
 		errorPath = oss_download_errorLog_debug
 
-	}else  {
+	} else {
 
 		errorPath = oss_download_errorLog
 
 	}
 
 	// 判断文件是否存在
-	_,err := os.Stat(errorPath)
+	_, err := os.Stat(errorPath)
 
 	if err != nil {
 
@@ -621,7 +621,7 @@ func removeErrorObject(objectKey string){
 	}
 
 	// 读取文件中的数据
-	errorObjects,err := utils.ReadLines(errorPath)
+	errorObjects, err := utils.ReadLines(errorPath)
 
 	if err != nil {
 		// 读取失败的处理
@@ -635,15 +635,15 @@ func removeErrorObject(objectKey string){
 
 	var errorStrings string
 
-	for _,errorObject := range errorObjects {
+	for _, errorObject := range errorObjects {
 
-		if !strings.Contains(errorObject,",") {
+		if !strings.Contains(errorObject, ",") {
 			continue
 		}
 
-		if strings.Contains(errorObject,objectKey) {
+		if strings.Contains(errorObject, objectKey) {
 
-			objectComponent := strings.Split(errorObject,",")
+			objectComponent := strings.Split(errorObject, ",")
 
 			if objectComponent[0] == objectKey {
 				continue
@@ -653,12 +653,12 @@ func removeErrorObject(objectKey string){
 
 		if errorStrings == "" {
 			errorStrings = errorObject
-		}else {
+		} else {
 			errorStrings = errorStrings + "\n" + errorObject
 		}
 	}
 
-	fileHandler,err := os.Create(errorPath)
+	fileHandler, err := os.Create(errorPath)
 	// 存储错误信息
 	writer := bufio.NewWriter(fileHandler)
 
@@ -689,7 +689,7 @@ func getToken() string {
 			// 获取输入账户名
 			isConfigAccount = false
 
-			oss_download_account = utils.ClientInputWithMessage("请输入管理员账户：",'\n')
+			oss_download_account = utils.ClientInputWithMessage("请输入管理员账户：", '\n')
 
 			if oss_download_account == "" {
 
@@ -701,7 +701,7 @@ func getToken() string {
 
 			isConfigAccount = false
 
-			oss_download_password = utils.ClientInputWithMessage("请输入密码：",'\n')
+			oss_download_password = utils.ClientInputWithMessage("请输入密码：", '\n')
 
 			if oss_download_password == "" {
 
@@ -709,7 +709,7 @@ func getToken() string {
 			}
 		}
 
-		token := utils.GetAdminPermission(oss_download_account,oss_download_password)
+		token := utils.GetAdminPermission(oss_download_account, oss_download_password)
 
 		if len(token) <= 0 || token == "" {
 
@@ -748,11 +748,11 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 
 		fmt.Println("没有配置文件")
 
-		return nil, nil,nil
+		return nil, nil, nil
 	}
 
 	// 清理空格键
-	utils.ClearDictionaryChar(configMap," ")
+	utils.ClearDictionaryChar(configMap, " ")
 	var configObject = configMap
 
 	oss_download_accessKeyId = configObject["AccessKeyId"]
@@ -773,33 +773,33 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 			downloadConfig.CoverImageKey = configObject["coverImageKey"]
 		}
 
-		coverScaleW,isFloat64 := utils.JudgeIsFloat64(configObject["coverWidthScale"])
+		coverScaleW, isFloat64 := utils.JudgeIsFloat64(configObject["coverWidthScale"])
 		if isFloat64 && coverScaleW > 0 && coverScaleW <= 1 {
 			downloadConfig.WaterWS = coverScaleW
 		}
 
-		coverScaleH,isFloat64 := utils.JudgeIsFloat64(configObject["coverHeightScale"])
+		coverScaleH, isFloat64 := utils.JudgeIsFloat64(configObject["coverHeightScale"])
 		if isFloat64 && coverScaleH > 0 && coverScaleH <= 1 {
 			downloadConfig.WaterHS = coverScaleH
 		}
 
-		value,isInt := utils.JudgeIsInt(configObject["transparent"])
+		value, isInt := utils.JudgeIsInt(configObject["transparent"])
 		if isInt && value >= 0 && value <= 100 {
 			downloadConfig.Transparent = configObject["transparent"]
 		}
 		locations := "nw,north,ne,west,center,east,sw,south,se"
 
-		if strings.Contains(locations,configObject["coverLocation"]) {
+		if strings.Contains(locations, configObject["coverLocation"]) {
 			downloadConfig.CoverLocation = configObject["coverLocation"]
 		}
 
-		x,isInt := utils.JudgeIsInt(configObject["x"])
+		x, isInt := utils.JudgeIsInt(configObject["x"])
 
 		if isInt && x >= 0 && x <= 4096 {
 			downloadConfig.XInstance = configObject["x"]
 		}
 
-		y,isInt := utils.JudgeIsInt(configObject["y"])
+		y, isInt := utils.JudgeIsInt(configObject["y"])
 
 		if isInt && y >= 0 && y <= 4096 {
 			downloadConfig.YInstance = configObject["y"]
@@ -818,55 +818,55 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 		oss_download_av_media = false
 	}
 
-	courseIdString:=configObject["courseIds"]
-	courseAliasNameString:=configObject["aliasNames"]
-	lessonIdString:=configObject["lessonIds"]
+	courseIdString := configObject["courseIds"]
+	courseAliasNameString := configObject["aliasNames"]
+	lessonIdString := configObject["lessonIds"]
 
 	if courseIdString == "" {
-		return nil,nil,nil
+		return nil, nil, nil
 	}
 	if courseAliasNameString == "" {
 		courseAliasNameString = courseIdString
 	}
 
-	courseIdString = strings.Replace(courseIdString," ","",-1)
-	lessonIdString = strings.Replace(lessonIdString," ","",-1)
-	courseAliasNameString = strings.Replace(courseAliasNameString," ","",-1)
+	courseIdString = strings.Replace(courseIdString, " ", "", -1)
+	lessonIdString = strings.Replace(lessonIdString, " ", "", -1)
+	courseAliasNameString = strings.Replace(courseAliasNameString, " ", "", -1)
 
-	courseIds = strings.Split(courseIdString,",")
-	courseAlias = strings.Split(courseAliasNameString,",")
+	courseIds = strings.Split(courseIdString, ",")
+	courseAlias = strings.Split(courseAliasNameString, ",")
 
 	if len(courseIds) <= 0 {
 
 		fmt.Println("没有配置courseId")
 
-		return nil, nil,nil
+		return nil, nil, nil
 	}
 
 	if lessonIdString == "" {
-		return courseIds,courseAlias,nil
+		return courseIds, courseAlias, nil
 	}
 
 	var lessonArrs []string
 
-	lessonArrs = strings.Split(lessonIdString,"],")
+	lessonArrs = strings.Split(lessonIdString, "],")
 
-	for _,lessonArr := range lessonArrs {
+	for _, lessonArr := range lessonArrs {
 
-		lessonArr = strings.Replace(lessonArr,"[","",-1)
-		lessonArr = strings.Replace(lessonArr,"]","",-1)
+		lessonArr = strings.Replace(lessonArr, "[", "", -1)
+		lessonArr = strings.Replace(lessonArr, "]", "", -1)
 
 		var lessonArray []string
 
 		if lessonArr == "" {
-			lessonArray = make([]string,0)
-		}else {
-			lessonArray = strings.Split(lessonArr,",")
+			lessonArray = make([]string, 0)
+		} else {
+			lessonArray = strings.Split(lessonArr, ",")
 		}
 
-		lessonIds = append(lessonIds,lessonArray)
+		lessonIds = append(lessonIds, lessonArray)
 	}
 
 	fmt.Println(lessonIds)
-	return courseIds,courseAlias,lessonIds
+	return courseIds, courseAlias, lessonIds
 }
