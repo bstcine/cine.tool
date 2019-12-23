@@ -18,6 +18,7 @@ var saveName string = "Target"
 
 func main() {
 
+	fmt.Print("git log => c80f")
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	if err != nil {

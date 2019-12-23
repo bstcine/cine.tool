@@ -106,6 +106,7 @@ func createCoverStyle() {
 
 func main() {
 
+	fmt.Print("git log => c80f")
 	// 确定资源存放路径和配置文件路径
 	var resourcePath string
 	var configPath string

@@ -37,6 +37,7 @@ type componseImage struct {
 var mediaConfgiModel model.MediaConfig
 
 func main() {
+	fmt.Print("git log => c80f")
 
 	var componse_workdir = ""
 	var mediaSynthesizerConfig string
