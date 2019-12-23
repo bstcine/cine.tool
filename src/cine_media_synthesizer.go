@@ -210,6 +210,11 @@ func startComponseVideoModel(videoModel componseVideo, prefixAdTmpTs string, suf
 			return true
 		} else {
 			isSuc := utils.CreatMp4WithMpegts(tmpAVPath, tmpPath, mediaConfgiModel)
+			err := os.Rename(tmpPath, savePath)
+			if err != nil {
+				fmt.Print(err)
+				return false
+			}
 			return isSuc
 		}
 	}
@@ -534,7 +539,7 @@ func readMediaSynthesuzerConfig(path string) bool {
 		false,
 		false,
 		1,
-		"1920*10810",
+		"1920*1080",
 		1920,
 		1080,
 		1920.0 / 1080.0,

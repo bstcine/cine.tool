@@ -163,6 +163,8 @@ func main() {
 		return
 	}
 
+	fmt.Print("courseAliasNames===>", courseAliasNames)
+
 	// 开始下载课件列表
 	downloadStatus := downloadCourseList(resourcePath, token, courseIds, courseAliasNames, lessonIds)
 
@@ -820,6 +822,7 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 
 	courseIdString := configObject["courseIds"]
 	courseAliasNameString := configObject["aliasNames"]
+	fmt.Print("courseAliasNameString==>", courseAliasNameString)
 	lessonIdString := configObject["lessonIds"]
 
 	if courseIdString == "" {
@@ -868,5 +871,8 @@ func readConfig(configPath string) (courseIds []string, courseAlias []string, le
 	}
 
 	fmt.Println(lessonIds)
+	fmt.Println("courseIds===>", courseIds)
+	fmt.Println("courseAlias===>", courseAlias)
+	fmt.Println("lessonIds===>", lessonIds)
 	return courseIds, courseAlias, lessonIds
 }

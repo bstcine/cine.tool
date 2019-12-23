@@ -38,6 +38,7 @@ func CreateTsWithImage(imagePath string, audioPath string, rate int, width int, 
 
 	runLine := "ffmpeg" + rataLine + loopLine + imageLine + audioLine +
 		vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
+	fmt.Println("CreateTsWithImage==>", runLine)
 	_, err := RunCMD(runLine)
 	if err != nil {
 		fmt.Println(runLine)
@@ -49,6 +50,7 @@ func CreateTsWithImage(imagePath string, audioPath string, rate int, width int, 
 /// MP4视频转换为Ts(不编码，直接拷贝)
 func CreateTsWithMp4(mp4 string, targetPath string) bool {
 	runLine := "ffmpeg -i \"" + mp4 + "\" -vcodec copy -acodec copy -y \"" + targetPath + "\""
+	fmt.Println("CreateTsWithMp4==>", runLine)
 	_, err := RunCMD(runLine)
 	if err != nil {
 		fmt.Println(runLine)
@@ -70,7 +72,7 @@ func ComponseMP4WithTs(mpegtsArr []string, targetPath string) bool {
 		}
 	}
 	runLine := "ffmpeg -i \"" + mpegtsConcat + "\" -vcodec copy -acodec copy -y \"" + tmpTarget + "\""
-	fmt.Println(runLine)
+	fmt.Println("ComponseMP4WithTs==>", runLine)
 	_, err := RunCMD(runLine)
 	if err != nil {
 		fmt.Println(runLine)
@@ -81,6 +83,7 @@ func ComponseMP4WithTs(mpegtsArr []string, targetPath string) bool {
 		"\"  -vcodec libx264 -x264-params \"profile=high:level=3.0\" -flags +ildct+ilme -pix_fmt yuv420p " +
 		"-acodec aac -ar 48000 -ac 2 -ab 480k -strict -2 -y \"" +
 		targetPath + "\""
+	fmt.Println("ComponseMP4WithTs==>", targetRunLine)
 	_, err = RunCMD(targetRunLine)
 
 	fmt.Println(targetRunLine)
@@ -130,6 +133,7 @@ func CreateTsWithImageAudio(imagePath string, audioPath string, targetPath strin
 	outPutLine := " -y -f mpegts \"" + targetPath + "\""
 	runLine := "ffmpeg" + rataLine + loopLine + imageLine + audioLine +
 		vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
+	fmt.Println("CreateTsWithImageAudio==>", runLine)
 	_, err := RunCMD(runLine)
 	if err != nil {
 		fmt.Println(runLine)
@@ -198,7 +202,7 @@ func CreateMpegtsWithImagesAudio(images []map[string]string, tmpDir string, audi
 		outPutLine := " -y -f mpegts \"" + tmpPath + "\""
 		imageRunLine := "ffmpeg" + rataLine + loopLine + imageLine + audioLine + startLine +
 			vcodecLine + durationLine + vfScaleLine + vfPadLine + acodecLine + outPutLine
-		fmt.Println(imageRunLine)
+		fmt.Println("CreateMpegtsWithImagesAudio==>", imageRunLine)
 		_, err := RunCMD(imageRunLine)
 		if err != nil {
 			fmt.Println(err)
@@ -287,7 +291,7 @@ func ComponseMpegts(mpegtsArr []string, targetPath string, mediaModel model.Medi
 		" -flags +ildct+ilme -pix_fmt " + mediaModel.Pix + " -s 1920*1080 -aspect 16:9"
 	acodecLine := " -acodec aac -ar 48000 -ac 2 -ab 480k -strict -2"
 	lines := "ffmpeg" + inputFileLine + vcodecLine + acodecLine + " -y -f mpegts " + "\"" + targetPath + "\""
-
+	fmt.Println("ComponseMpegts==>", lines)
 	_, err := RunCMD(lines)
 	if err != nil {
 
@@ -318,7 +322,7 @@ func CreatMp4WithMpegts(avPath string, savePath string, mediaModel model.MediaCo
 
 	line := "ffmpeg" + inputLine + vcodeLine + acodecLine + maxPacketLine + outputLine
 
-	fmt.Println(line)
+	fmt.Println("CreatMp4WithMpegts==>", line)
 	_, err := RunCMD(line)
 
 	return err == nil
